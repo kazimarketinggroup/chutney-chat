@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getSupabaseAdmin, formatPrice } from '@/lib/supabase';
+import { sendBookingEmails } from '@/lib/bookingEmail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,53 @@ export async function GET(req: Request) {
 
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
+    }
+
+    // Fallback confirmation: If Stripe confirms payment succeeded, but the webhook hasn't updated the DB
+    // (e.g. during local testing or if webhook delivery was delayed/not configured), update the DB and trigger emails now.
+    if (intent.status === 'succeeded' && booking.status !== 'paid') {
+      const { data: updated } = await supabase
+        .from('bookings')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          stripe_payment_intent_id: intent.id,
+        })
+        .eq('id', bookingId)
+        .neq('status', 'paid')
+        .select('*')
+        .maybeSingle();
+
+      if (updated) {
+        booking = updated;
+
+        // Increment ticket counter
+        await supabase.rpc('increment_tickets_sold', {
+          p_event_id: updated.event_id,
+          p_quantity: updated.quantity,
+        });
+
+        // Trigger confirmation emails
+        try {
+          const { data: fullEventRow } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', updated.event_id)
+            .single();
+
+          if ((!updated.guest_details || updated.guest_details.length === 0) && intent.metadata?.guest_details) {
+            try {
+              updated.guest_details = JSON.parse(intent.metadata.guest_details);
+            } catch {
+              // ignore
+            }
+          }
+
+          await sendBookingEmails(updated, fullEventRow);
+        } catch (emailErr) {
+          console.error('[booking-status] email delivery failed:', emailErr);
+        }
+      }
     }
 
     const { data: eventRow } = await supabase

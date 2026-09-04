@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, AlertCircle, CheckCircle2, Lock, ArrowLeft, CalendarPlus } from 'lucide-react';
+import { X, Loader2, AlertCircle, CheckCircle2, Lock, ArrowLeft, CalendarPlus, Download } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -11,6 +11,7 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { TicketCard, useTicketNumber, calendarUrl, type TicketData } from './TicketCard';
+import { generateETicketHTML } from '../lib/generateETicketHTML';
 
 export interface TicketEventDetails {
   /** Matches events.slug in Supabase — this is what the server prices. */
@@ -82,6 +83,13 @@ interface PaymentSession {
   currency: string;
 }
 
+interface GuestState {
+  name: string;
+  email: string;
+  company: string;
+  role: string;
+}
+
 const EMPTY_FORM = { name: '', phone: '', email: '', company: '', role: '', quantity: 1 };
 
 const inputClass =
@@ -92,12 +100,36 @@ export function TicketModal() {
 
   const [step, setStep] = useState<Step>('details');
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [guests, setGuests] = useState<GuestState[]>([]);
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Set once payment succeeds; the ticket view polls this for the real number.
   const [paidIntentId, setPaidIntentId] = useState<string | null>(null);
   const [fallbackTicketNumber, setFallbackTicketNumber] = useState('');
+
+  // Sync guests array when quantity or primary buyer changes
+  useEffect(() => {
+    setGuests((prev) => {
+      const targetLength = formData.quantity;
+      const next: GuestState[] = [];
+      for (let i = 0; i < targetLength; i++) {
+        if (i === 0) {
+          next.push({
+            name: formData.name,
+            email: formData.email,
+            company: formData.company,
+            role: formData.role,
+          });
+        } else if (prev[i]) {
+          next.push(prev[i]);
+        } else {
+          next.push({ name: '', email: '', company: '', role: '' });
+        }
+      }
+      return next;
+    });
+  }, [formData.quantity, formData.name, formData.email, formData.company, formData.role]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -107,9 +139,20 @@ export function TicketModal() {
     }));
   };
 
+  const handleGuestChange = (index: number, field: keyof GuestState, value: string) => {
+    setGuests((prev) => {
+      const copy = [...prev];
+      if (copy[index]) {
+        copy[index] = { ...copy[index], [field]: value };
+      }
+      return copy;
+    });
+  };
+
   const resetAll = () => {
     setStep('details');
     setFormData(EMPTY_FORM);
+    setGuests([]);
     setSession(null);
     setSubmitting(false);
     setError(null);
@@ -144,6 +187,7 @@ export function TicketModal() {
           company: formData.company,
           role: formData.role,
           quantity: formData.quantity,
+          guests,
         }),
       });
 
@@ -231,14 +275,14 @@ export function TicketModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative z-10 w-full max-w-[760px] bg-[#FAF0E6] border border-[#F5E2D0] rounded-[24px] sm:rounded-[32px] p-6 sm:p-10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] text-left my-auto"
+            className="relative z-10 w-full max-w-[920px] max-h-[88vh] overflow-y-auto bg-[#FAF0E6] border border-[#F5E2D0] rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] text-left my-auto"
           >
             {/* Close Button */}
             <button
               onClick={handleClose}
               type="button"
               disabled={submitting}
-              className="absolute top-5 right-5 sm:top-7 sm:right-7 w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-[#555555] hover:text-black transition-colors disabled:opacity-40 z-10"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-[#555555] hover:text-black transition-colors disabled:opacity-40 z-10"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -250,6 +294,7 @@ export function TicketModal() {
                 paymentIntentId={paidIntentId}
                 fallbackNumber={fallbackTicketNumber}
                 formData={formData}
+                guests={guests}
                 eventTitle={eventDetails.title}
                 amountPence={session?.amountPence}
                 currency={session?.currency}
@@ -258,12 +303,12 @@ export function TicketModal() {
             ) : (
               <>
                 {/* Header */}
-                <div className="mb-6 sm:mb-8 pr-8">
-                  <h2 className="text-xl sm:text-2xl lg:text-[26px] font-bold text-[#1f1f1f] tracking-tight leading-snug">
+                <div className="mb-4 sm:mb-6 pr-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#1f1f1f] tracking-tight leading-snug">
                     {eventDetails.title}
                   </h2>
                   {/* Step indicator */}
-                  <div className="flex items-center gap-2 mt-4">
+                  <div className="flex items-center gap-2 mt-2.5">
                     <StepDot active={step === 'details'} done={step === 'payment'} label="1" />
                     <div
                       className={`h-[2px] w-10 rounded transition-colors ${
@@ -279,26 +324,26 @@ export function TicketModal() {
 
                 {/* ---------- STEP 1: DETAILS ---------- */}
                 {step === 'details' && (
-                  <form onSubmit={handleDetailsSubmit} className="space-y-4 sm:space-y-6">
-                    <div>
-                      <label htmlFor="modal-name" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
-                        Name *
-                      </label>
-                      <input
-                        id="modal-name"
-                        type="text"
-                        name="name"
-                        required
-                        disabled={submitting}
-                        value={formData.name}
-                        onChange={handleChange}
-                        className={inputClass}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <form onSubmit={handleDetailsSubmit} className="space-y-4">
+                    {/* Primary Buyer Row 1: Name | Phone | Email */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                       <div>
-                        <label htmlFor="modal-phone" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
+                        <label htmlFor="modal-name" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
+                          Full Name *
+                        </label>
+                        <input
+                          id="modal-name"
+                          type="text"
+                          name="name"
+                          required
+                          disabled={submitting}
+                          value={formData.name}
+                          onChange={handleChange}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="modal-phone" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
                           Phone
                         </label>
                         <input
@@ -312,7 +357,7 @@ export function TicketModal() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="modal-email" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
+                        <label htmlFor="modal-email" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
                           Email *
                         </label>
                         <input
@@ -328,10 +373,11 @@ export function TicketModal() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Primary Buyer Row 2: Company | Role | Quantity */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                       <div>
-                        <label htmlFor="modal-company" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
-                          Company
+                        <label htmlFor="modal-company" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
+                          Company (Optional)
                         </label>
                         <input
                           id="modal-company"
@@ -344,8 +390,8 @@ export function TicketModal() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="modal-role" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
-                          Role
+                        <label htmlFor="modal-role" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
+                          Role (Optional)
                         </label>
                         <input
                           id="modal-role"
@@ -357,35 +403,124 @@ export function TicketModal() {
                           className={inputClass}
                         />
                       </div>
+                      <div>
+                        <label htmlFor="modal-quantity" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
+                          Tickets
+                        </label>
+                        <select
+                          id="modal-quantity"
+                          name="quantity"
+                          disabled={submitting}
+                          value={formData.quantity}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n}>
+                              {n} {n === 1 ? 'ticket' : 'tickets'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="max-w-[200px]">
-                      <label htmlFor="modal-quantity" className="block text-sm font-medium text-[#4a4a4a] mb-1.5">
-                        Tickets
-                      </label>
-                      <select
-                        id="modal-quantity"
-                        name="quantity"
-                        disabled={submitting}
-                        value={formData.quantity}
-                        onChange={handleChange}
-                        className={inputClass}
-                      >
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={n}>
-                            {n} {n === 1 ? 'ticket' : 'tickets'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* ---------- DYNAMIC GUEST RECIPIENTS SECTION ---------- */}
+                    {formData.quantity > 1 && (
+                      <div className="space-y-3 pt-3 border-t border-[#E8D5C4]">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-sm sm:text-base font-bold text-[#1f1f1f]">
+                              Guest Recipient Details
+                            </h3>
+                            <p className="text-xs text-[#666]">
+                              Provide recipient info for each guest to send individual E-Tickets.
+                            </p>
+                          </div>
+                        </div>
+
+                        {Array.from({ length: formData.quantity - 1 }).map((_, idx) => {
+                          const guestIndex = idx + 1;
+                          const currentGuest = guests[guestIndex] || { name: '', email: '', company: '', role: '' };
+                          return (
+                            <div
+                              key={guestIndex}
+                              className="p-3.5 sm:p-4 rounded-[14px] bg-[#FFF8F2] border border-[#F0E2D4] space-y-2.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF6600]">
+                                  Guest #{guestIndex + 1} Recipient
+                                </span>
+                                <span className="text-[11px] text-[#888]">Ticket #{guestIndex + 1}</span>
+                              </div>
+
+                              {/* 3-Column Horizontal Grid for Guest Details */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label
+                                    htmlFor={`guest-name-${guestIndex}`}
+                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
+                                  >
+                                    Guest Name *
+                                  </label>
+                                  <input
+                                    id={`guest-name-${guestIndex}`}
+                                    type="text"
+                                    required
+                                    disabled={submitting}
+                                    placeholder={`Full name`}
+                                    value={currentGuest.name}
+                                    onChange={(e) => handleGuestChange(guestIndex, 'name', e.target.value)}
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={`guest-email-${guestIndex}`}
+                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
+                                  >
+                                    Guest Email
+                                  </label>
+                                  <input
+                                    id={`guest-email-${guestIndex}`}
+                                    type="email"
+                                    disabled={submitting}
+                                    placeholder="Default: Primary email"
+                                    value={currentGuest.email}
+                                    onChange={(e) => handleGuestChange(guestIndex, 'email', e.target.value)}
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={`guest-role-${guestIndex}`}
+                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
+                                  >
+                                    Role / Company
+                                  </label>
+                                  <input
+                                    id={`guest-role-${guestIndex}`}
+                                    type="text"
+                                    disabled={submitting}
+                                    placeholder="Optional"
+                                    value={currentGuest.role}
+                                    onChange={(e) => handleGuestChange(guestIndex, 'role', e.target.value)}
+                                    className={inputClass}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {error && <ErrorBox message={error} />}
 
-                    <div className="pt-2 sm:pt-4">
+                    <div className="pt-2">
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-8 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-8 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed w-full sm:w-auto"
                       >
                         {submitting ? (
                           <>
@@ -434,6 +569,7 @@ function SuccessStep({
   paymentIntentId,
   fallbackNumber,
   formData,
+  guests,
   eventTitle,
   amountPence,
   currency,
@@ -442,6 +578,7 @@ function SuccessStep({
   paymentIntentId: string | null;
   fallbackNumber: string;
   formData: typeof EMPTY_FORM;
+  guests?: Array<{ name: string; email: string; company: string; role: string }>;
   eventTitle: string;
   amountPence?: number;
   currency?: string;
@@ -477,6 +614,48 @@ function SuccessStep({
 
   const calUrl = details ? calendarUrl(ticketData, ticketNumber) : null;
 
+  const handleDownloadTicket = () => {
+    const dayText = details?.startsAt
+      ? new Intl.DateTimeFormat('en-GB', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Europe/London',
+        }).format(new Date(details.startsAt))
+      : 'Wednesday 9th September 2026';
+
+    const timeText = details?.startsAt ? '6:30pm – 9:30pm' : '6:30pm – 9:30pm';
+
+    const guestList = guests && guests.length > 0
+      ? guests
+      : [{ name: formData.name, email: formData.email, company: formData.company, role: formData.role }];
+
+    const html = generateETicketHTML({
+      ticketNumber,
+      eventTitle: details?.title || eventTitle,
+      venue: details?.venue || 'The Farmhouse, Coventry',
+      date: dayText,
+      time: timeText,
+      total: formatPence(amountPence, currency),
+      primaryBuyer: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.company,
+        role: formData.role,
+      },
+      guests: guestList,
+      paymentRef: paymentIntentId || undefined,
+    });
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(html);
+      printWin.document.close();
+    }
+  };
+
   return (
     <div className="py-2">
       <div className="text-center mb-6">
@@ -499,12 +678,20 @@ function SuccessStep({
       <TicketCard data={ticketData} ticketNumber={ticketNumber} resolving={!resolved && !settled} />
 
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
+        <button
+          onClick={handleDownloadTicket}
+          type="button"
+          className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all shadow-sm hover:shadow"
+        >
+          <Download className="w-4 h-4 text-[#FF6600]" />
+          Download ticket
+        </button>
         {calUrl && (
           <a
             href={calUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-6 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all"
+            className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all"
           >
             <CalendarPlus className="w-4 h-4" />
             Add to calendar
@@ -512,7 +699,7 @@ function SuccessStep({
         )}
         <button
           onClick={onClose}
-          className="flex-1 h-11 sm:h-12 px-8 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg"
+          className="flex-1 h-11 sm:h-12 px-6 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg"
         >
           Done
         </button>

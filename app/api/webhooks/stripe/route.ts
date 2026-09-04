@@ -129,6 +129,15 @@ async function markBookingPaid(intent: Stripe.PaymentIntent) {
       .select('*')
       .eq('id', updated.event_id)
       .single();
+
+    if ((!updated.guest_details || updated.guest_details.length === 0) && intent.metadata?.guest_details) {
+      try {
+        updated.guest_details = JSON.parse(intent.metadata.guest_details);
+      } catch {
+        // ignore JSON parse error
+      }
+    }
+
     await sendBookingEmails(updated, eventRow);
   } catch (err) {
     console.error('[stripe-webhook] confirmation email failed:', err);

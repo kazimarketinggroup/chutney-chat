@@ -7,6 +7,14 @@ export const dynamic = 'force-dynamic';
 
 const MAX_QUANTITY = 10;
 
+interface GuestInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+}
+
 interface CheckoutBody {
   eventSlug?: string;
   name?: string;
@@ -15,6 +23,7 @@ interface CheckoutBody {
   company?: string;
   role?: string;
   quantity?: number;
+  guests?: GuestInput[];
 }
 
 function clean(value: unknown, max = 200): string {
@@ -23,14 +32,6 @@ function clean(value: unknown, max = 200): string {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * Creates the booking row and a PaymentIntent, and returns the client secret.
- *
- * The card form lives in our own modal (Stripe Elements), so there is no
- * redirect to a hosted page. Elements needs a client secret; it cannot use a
- * Checkout Session. Card details still go straight from the iframe to Stripe —
- * they never touch this server, so PCI scope is unchanged.
- */
 export async function POST(req: Request) {
   let body: CheckoutBody;
   try {
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  // ---- validate the attendee details ----
+  // ---- validate the primary attendee details ----
   const eventSlug = clean(body.eventSlug, 120);
   const name = clean(body.name, 120);
   const email = clean(body.email, 200).toLowerCase();
@@ -59,6 +60,42 @@ export async function POST(req: Request) {
       { error: `Quantity must be between 1 and ${MAX_QUANTITY}.` },
       { status: 400 }
     );
+  }
+
+  // ---- validate & sanitize guest recipient list ----
+  const guestDetails: Array<{ name: string; email: string; company?: string; role?: string }> = [];
+  const rawGuests = Array.isArray(body.guests) ? body.guests : [];
+
+  for (let i = 0; i < quantity; i++) {
+    if (i === 0) {
+      // Primary guest
+      const gName = clean(rawGuests[0]?.name, 120) || name;
+      const gEmail = clean(rawGuests[0]?.email, 200).toLowerCase() || email;
+      const gCompany = clean(rawGuests[0]?.company, 160) || company;
+      const gRole = clean(rawGuests[0]?.role, 160) || role;
+      guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
+    } else {
+      const guestObj = rawGuests[i];
+      const gName = clean(guestObj?.name, 120);
+      const gEmail = clean(guestObj?.email, 200).toLowerCase() || email;
+      const gCompany = clean(guestObj?.company, 160) || company;
+      const gRole = clean(guestObj?.role, 160);
+
+      if (!gName) {
+        return NextResponse.json(
+          { error: `Please provide the name for Guest #${i + 1}.` },
+          { status: 400 }
+        );
+      }
+      if (gEmail && !EMAIL_RE.test(gEmail)) {
+        return NextResponse.json(
+          { error: `Please provide a valid email address for Guest #${i + 1}.` },
+          { status: 400 }
+        );
+      }
+
+      guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
+    }
   }
 
   try {
@@ -96,8 +133,8 @@ export async function POST(req: Request) {
     const amountPence = event.price_pence * quantity;
 
     // ---- create the pending booking BEFORE taking payment ----
-    // If the user abandons the form we still keep the lead; the webhook is what
-    // flips this row to 'paid'.
+    let bookingId: string | null = null;
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert({
@@ -108,6 +145,7 @@ export async function POST(req: Request) {
         company: company || null,
         role: role || null,
         quantity,
+        guest_details: guestDetails,
         status: 'pending',
         amount_pence: amountPence,
         currency: event.currency,
@@ -115,12 +153,36 @@ export async function POST(req: Request) {
       .select('id')
       .single<{ id: string }>();
 
-    if (bookingError || !booking) {
-      console.error('[checkout] booking insert failed:', bookingError);
-      return NextResponse.json(
-        { error: 'Could not start your booking. Please try again.' },
-        { status: 500 }
-      );
+    if (booking?.id) {
+      bookingId = booking.id;
+    } else {
+      console.warn('[checkout] insert with guest_details failed, retrying without guest_details:', bookingError);
+      // Fallback: insert without guest_details column if schema is not yet updated
+      const { data: fbBooking, error: fbError } = await supabase
+        .from('bookings')
+        .insert({
+          event_id: event.id,
+          name,
+          email,
+          phone: phone || null,
+          company: company || null,
+          role: role || null,
+          quantity,
+          status: 'pending',
+          amount_pence: amountPence,
+          currency: event.currency,
+        })
+        .select('id')
+        .single<{ id: string }>();
+
+      if (fbError || !fbBooking) {
+        console.error('[checkout] fallback booking insert failed:', fbError);
+        return NextResponse.json(
+          { error: 'Could not start your booking. Please try again.' },
+          { status: 500 }
+        );
+      }
+      bookingId = fbBooking.id;
     }
 
     // ---- PaymentIntent for the in-page card form ----
@@ -130,24 +192,22 @@ export async function POST(req: Request) {
       currency: event.currency,
       receipt_email: email,
       description: `${event.title} — ${quantity} ticket${quantity === 1 ? '' : 's'}`,
-      // Lets Stripe offer cards plus whatever else is enabled on the account
-      // (Apple Pay / Google Pay / Link) without extra code here.
       automatic_payment_methods: { enabled: true },
-      // The webhook reads these back to reconcile the booking.
       metadata: {
-        booking_id: booking.id,
+        booking_id: bookingId,
         event_id: event.id,
         event_slug: event.slug,
         attendee_name: name,
         attendee_email: email,
         quantity: String(quantity),
+        guest_details: JSON.stringify(guestDetails),
       },
     });
 
     await supabase
       .from('bookings')
       .update({ stripe_payment_intent_id: intent.id })
-      .eq('id', booking.id);
+      .eq('id', bookingId);
 
     if (!intent.client_secret) {
       return NextResponse.json(
@@ -158,7 +218,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       clientSecret: intent.client_secret,
-      bookingId: booking.id,
+      bookingId,
       amountPence,
       currency: event.currency,
     });

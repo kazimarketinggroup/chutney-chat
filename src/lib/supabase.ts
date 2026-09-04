@@ -96,6 +96,14 @@ export interface EventRow {
   is_active: boolean;
 }
 
+export interface GuestAttendee {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+}
+
 /** Shape of a row in public.bookings */
 export interface BookingRow {
   id: string;
@@ -106,6 +114,7 @@ export interface BookingRow {
   company: string | null;
   role: string | null;
   quantity: number;
+  guest_details?: GuestAttendee[] | null;
   /** Human-readable ticket number, e.g. CC-0909-0042. Set when paid. */
   ticket_number: string | null;
   status: 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';

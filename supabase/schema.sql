@@ -33,8 +33,8 @@ create table if not exists public.bookings (
   email                      text not null,
   phone                      text,
   company                    text,
-  role                       text,
   quantity                   integer not null default 1 check (quantity > 0),
+  guest_details              jsonb,
 
   -- payment state
   status                     text not null default 'pending'

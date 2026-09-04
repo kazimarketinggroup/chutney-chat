@@ -20,6 +20,22 @@ function getTransporter() {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
   if (!user || !pass) return null;
+
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT) || 587;
+
+  // If host is explicitly specified OR if email belongs to outlook/office365
+  if (host || user.includes('outlook') || user.includes('office365') || user.includes('hotmaill')) {
+    return nodemailer.createTransport({
+      host: host || 'smtp.office365.com',
+      port: port,
+      secure: false, // TLS
+      auth: { user, pass },
+      tls: { ciphers: 'SSLv3' },
+    });
+  }
+
+  // Default to Gmail service
   return nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
 }
 
@@ -127,6 +143,9 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
     booking.currency
   );
 
+  const mailPromises: Promise<unknown>[] = [];
+
+  // Primary Buyer Email (Receipt + Ticket)
   const attendeeHtml = buildTicketEmail({
     name: booking.name,
     eventTitle,
@@ -143,9 +162,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
     email: booking.email,
   });
 
-  const adminHtml = buildAdminEmail({ booking, eventTitle, venue, day, ticket, total });
-
-  await Promise.allSettled([
+  mailPromises.push(
     transporter.sendMail({
       from: `"Chutney & Chat" <${process.env.EMAIL_USER}>`,
       to: booking.email,
@@ -170,15 +187,87 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
           : '') +
         `\nPlease bring your ticket number with you${isMulti ? ' — it covers all ' + booking.quantity + ' guests' : ''}.\n\n` +
         `Chutney & Chat`,
-    }),
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+      },
+    })
+  );
+
+  // If there are specific guest recipient emails provided, dispatch individual guest E-Tickets
+  if (Array.isArray(booking.guest_details) && booking.guest_details.length > 1) {
+    booking.guest_details.forEach((guest, index) => {
+      // Guest 1 is primary buyer; skip if already sent
+      if (index === 0) return;
+
+      const guestEmail = guest.email || booking.email;
+      // If guest email is distinct from primary buyer email, send dedicated E-Ticket
+      if (guestEmail && guestEmail.toLowerCase() !== booking.email.toLowerCase()) {
+        const guestTicketRef = `${ticket}-${index + 1}`;
+        const guestCalUrl = calendarUrl(event, guestTicketRef);
+        const guestHtml = buildTicketEmail({
+          name: guest.name || `Guest #${index + 1}`,
+          eventTitle,
+          venue,
+          day,
+          time,
+          ticket: guestTicketRef,
+          quantity: 1,
+          unitPrice,
+          total,
+          calUrl: guestCalUrl,
+          paidAt: formatPaidAt(booking.paid_at),
+          paymentRef: booking.stripe_payment_intent_id,
+          email: guestEmail,
+        });
+
+        mailPromises.push(
+          transporter.sendMail({
+            from: `"Chutney & Chat" <${process.env.EMAIL_USER}>`,
+            to: guestEmail,
+            subject: `🎟️ Your E-Ticket ${guestTicketRef} — ${eventTitle}`,
+            html: guestHtml,
+            text:
+              `Hi ${guest.name || 'Guest'},\n\n` +
+              `Your E-Ticket for ${eventTitle} is confirmed.\n\n` +
+              `Ticket Number: ${guestTicketRef}\n` +
+              `Venue: ${venue}\n` +
+              (day ? `Date: ${day}${time ? ', ' + time : ''}\n` : '') +
+              `Attendee: ${guest.name || 'Guest'}\n\n` +
+              `Please present this ticket number on entry at the door.\n\n` +
+              `Chutney & Chat`,
+            headers: {
+              'X-Priority': '1',
+              'X-MSMail-Priority': 'High',
+              'Importance': 'high',
+            },
+          })
+        );
+      }
+    });
+  }
+
+  // Admin Notification Email
+  const adminHtml = buildAdminEmail({ booking, eventTitle, venue, day, ticket, total });
+  mailPromises.push(
     transporter.sendMail({
       from: `"Chutney & Chat Bookings" <${process.env.EMAIL_USER}>`,
       to: ADMIN_EMAIL,
       replyTo: booking.email,
       subject: `New booking ${ticket} — ${booking.name} — ${eventTitle}`,
       html: adminHtml,
-    }),
-  ]);
+    })
+  );
+
+  const results = await Promise.allSettled(mailPromises);
+  results.forEach((res, idx) => {
+    if (res.status === 'rejected') {
+      console.error(`[bookingEmail] Mail #${idx + 1} failed:`, res.reason);
+    } else {
+      console.log(`[bookingEmail] Mail #${idx + 1} sent successfully.`);
+    }
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -413,7 +502,7 @@ function buildAdminEmail(d: {
           </div>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-            ${row('Name', esc(b.name), true)}
+            ${row('Primary Buyer', esc(b.name), true)}
             ${row('Email', `<a href="mailto:${esc(b.email)}" style="color:${BRAND.orange};text-decoration:none;">${esc(b.email)}</a>`)}
             ${row('Phone', esc(b.phone) || '—')}
             ${row('Company', esc(b.company) || '—')}
@@ -421,6 +510,16 @@ function buildAdminEmail(d: {
             ${row('Venue', esc(d.venue))}
             ${d.day ? row('Date', esc(d.day)) : ''}
             ${row('Tickets', String(b.quantity))}
+            ${
+              Array.isArray(b.guest_details) && b.guest_details.length > 0
+                ? row(
+                    'Guests Breakdown',
+                    b.guest_details
+                      .map((g, i) => `${i + 1}. ${esc(g.name)}${g.email ? ' (' + esc(g.email) + ')' : ''}`)
+                      .join('<br>')
+                  )
+                : ''
+            }
             ${row('Amount', esc(d.total), true)}
             ${row('Payment ref', esc(b.stripe_payment_intent_id) || '—')}
           </table>
