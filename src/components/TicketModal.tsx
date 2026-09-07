@@ -2,7 +2,32 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, AlertCircle, CheckCircle2, Lock, ArrowLeft, CalendarPlus, Download } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Lock,
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  Download,
+  Ticket,
+  ShieldCheck,
+  Sparkles,
+  User,
+  Mail,
+  Phone,
+  Building2,
+  Briefcase,
+  Calendar,
+  MapPin,
+  Check,
+  CreditCard,
+  Receipt,
+  Users,
+  ChevronDown,
+} from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -12,6 +37,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { TicketCard, useTicketNumber, calendarUrl, type TicketData } from './TicketCard';
 import { generateETicketHTML } from '../lib/generateETicketHTML';
+import { downloadTicketPDF } from '../lib/downloadTicketPDF';
 
 export interface TicketEventDetails {
   /** Matches events.slug in Supabase — this is what the server prices. */
@@ -92,9 +118,6 @@ interface GuestState {
 
 const EMPTY_FORM = { name: '', phone: '', email: '', company: '', role: '', quantity: 1 };
 
-const inputClass =
-  'w-full h-11 sm:h-12 px-4 rounded-[8px] bg-[#FFF8F2] border border-[#F0E2D4] text-[#2d2d2d] text-sm sm:text-base focus:bg-white focus:border-[#FF6600] focus:ring-2 focus:ring-[#FF6600]/20 focus:outline-none transition-all shadow-none disabled:opacity-60';
-
 export function TicketModal() {
   const { isOpen, eventDetails, closeModal } = useTicketModal();
 
@@ -167,6 +190,38 @@ export function TicketModal() {
     setTimeout(resetAll, 250);
   };
 
+  // Safe pricing calculation for real-time order summary display
+  const unitPrice = useMemo(() => {
+    const match = eventDetails.price.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) : 35.0;
+  }, [eventDetails.price]);
+
+  const currencySymbol = useMemo(() => {
+    const match = eventDetails.price.match(/^[^\d]+/);
+    return match ? match[0].trim() : '£';
+  }, [eventDetails.price]);
+
+  const calculatedSubtotal = useMemo(() => {
+    return (unitPrice * formData.quantity).toFixed(2);
+  }, [unitPrice, formData.quantity]);
+
+  // Parse title into date and venue if separated by hyphen for premium badges
+  const parsedEvent = useMemo(() => {
+    const parts = eventDetails.title.split(' - ');
+    if (parts.length >= 2) {
+      return {
+        date: parts[0].trim(),
+        venue: parts.slice(1).join(' - ').trim(),
+        title: eventDetails.title,
+      };
+    }
+    return {
+      date: null,
+      venue: null,
+      title: eventDetails.title,
+    };
+  }, [eventDetails.title]);
+
   /** Step 1 → create the booking + PaymentIntent, then show the card form. */
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +266,7 @@ export function TicketModal() {
     setStep('done');
   };
 
-  // Stripe Elements themed to match the modal's warm cream palette.
+  // Stripe Elements themed to match the modal's warm cream & brand orange palette.
   const elementsOptions = useMemo(
     () =>
       session
@@ -221,33 +276,41 @@ export function TicketModal() {
               theme: 'flat' as const,
               variables: {
                 colorPrimary: '#FF6600',
-                colorBackground: '#FFF8F2',
-                colorText: '#2d2d2d',
-                colorDanger: '#A6221D',
+                colorBackground: '#FFFDFB',
+                colorText: '#1F1F1F',
+                colorDanger: '#DC2626',
                 fontFamily: 'inherit',
-                borderRadius: '8px',
-                spacingUnit: '4px',
+                borderRadius: '12px',
+                spacingUnit: '4.5px',
               },
               rules: {
                 '.Input': {
-                  border: '1px solid #F0E2D4',
-                  boxShadow: 'none',
-                  padding: '12px 16px',
+                  border: '1.5px solid #E8DDD2',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  padding: '13px 16px',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: '15px',
                 },
                 '.Input:focus': {
-                  border: '1px solid #FF6600',
-                  boxShadow: '0 0 0 2px rgba(255,102,0,0.2)',
+                  border: '1.5px solid #FF6600',
+                  boxShadow: '0 0 0 3px rgba(255,102,0,0.18)',
                   backgroundColor: '#ffffff',
                 },
                 '.Label': {
-                  fontWeight: '500',
-                  color: '#4a4a4a',
+                  fontWeight: '600',
+                  color: '#403934',
+                  fontSize: '13px',
                   marginBottom: '6px',
                 },
-                '.Tab': { border: '1px solid #F0E2D4', boxShadow: 'none' },
+                '.Tab': {
+                  border: '1.5px solid #E8DDD2',
+                  boxShadow: 'none',
+                  backgroundColor: '#FFF8F2',
+                },
                 '.Tab--selected': {
-                  border: '1px solid #FF6600',
+                  border: '1.5px solid #FF6600',
                   backgroundColor: '#ffffff',
+                  boxShadow: '0 2px 8px rgba(255,102,0,0.12)',
                 },
               },
             },
@@ -259,33 +322,33 @@ export function TicketModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
           {/* Ambient Backdrop Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/65 backdrop-blur-md"
           />
 
           {/* Modal Container Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative z-10 w-full max-w-[920px] max-h-[88vh] overflow-y-auto bg-[#FAF0E6] border border-[#F5E2D0] rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] text-left my-auto"
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="relative z-10 w-full max-w-[980px] max-h-[94vh] overflow-y-auto modal-smooth-scroll bg-[#FAF3EC] border border-[#EADBCC] rounded-[22px] sm:rounded-[28px] p-4 sm:p-5 md:p-6 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)] text-left my-auto"
           >
-            {/* Close Button */}
+            {/* Elegant Close Button */}
             <button
               onClick={handleClose}
               type="button"
               disabled={submitting}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-[#555555] hover:text-black transition-colors disabled:opacity-40 z-10"
-              aria-label="Close"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-[#555555] hover:text-[#111] transition-all hover:scale-105 active:scale-95 disabled:opacity-40 z-20 cursor-pointer"
+              aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
 
             {/* ---------- STEP 3: SUCCESS — the ticket ---------- */}
@@ -302,235 +365,424 @@ export function TicketModal() {
               />
             ) : (
               <>
-                {/* Header */}
-                <div className="mb-4 sm:mb-6 pr-8">
-                  <h2 className="text-xl sm:text-2xl font-bold text-[#1f1f1f] tracking-tight leading-snug">
-                    {eventDetails.title}
-                  </h2>
-                  {/* Step indicator */}
-                  <div className="flex items-center gap-2 mt-2.5">
-                    <StepDot active={step === 'details'} done={step === 'payment'} label="1" />
-                    <div
-                      className={`h-[2px] w-10 rounded transition-colors ${
-                        step === 'payment' ? 'bg-[#FF6600]' : 'bg-[#E8D5C4]'
-                      }`}
-                    />
-                    <StepDot active={step === 'payment'} done={false} label="2" />
-                    <span className="ml-2 text-xs sm:text-sm text-[#7a7a7a] font-medium">
-                      {step === 'details' ? 'Your details' : 'Payment'}
+                {/* ---------- COMPACT TOP HEADER & BRANDING ---------- */}
+                <div className="mb-3.5 sm:mb-4 pr-10">
+                  {/* Category Pill & Venue Badges Row */}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFE8D6] border border-[#FFD0B0] text-[#D94F00] text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3 text-[#FF6600]" />
+                      Official Event Pass
                     </span>
+                    {parsedEvent.date && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFF7F0] border border-[#EEDBCA] text-[#63574D] text-[10px] sm:text-[11px] font-medium">
+                        <Calendar className="w-3 h-3 text-[#FF6600]" />
+                        {parsedEvent.date}
+                      </span>
+                    )}
+                    {parsedEvent.venue && (
+                      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFF7F0] border border-[#EEDBCA] text-[#63574D] text-[10px] sm:text-[11px] font-medium">
+                        <MapPin className="w-3 h-3 text-[#FF6600]" />
+                        {parsedEvent.venue}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Main Event Title */}
+                  <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-[#1a1a1a] tracking-tight leading-snug">
+                    {parsedEvent.title}
+                  </h2>
+
+                  {/* Compact Stepper */}
+                  <div className="mt-2.5">
+                    <CheckoutStepper step={step} />
                   </div>
                 </div>
 
                 {/* ---------- STEP 1: DETAILS ---------- */}
                 {step === 'details' && (
-                  <form onSubmit={handleDetailsSubmit} className="space-y-4">
-                    {/* Primary Buyer Row 1: Name | Phone | Email */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                      <div>
-                        <label htmlFor="modal-name" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Full Name *
-                        </label>
-                        <input
-                          id="modal-name"
-                          type="text"
-                          name="name"
-                          required
-                          disabled={submitting}
-                          value={formData.name}
-                          onChange={handleChange}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="modal-phone" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Phone
-                        </label>
-                        <input
-                          id="modal-phone"
-                          type="tel"
-                          name="phone"
-                          disabled={submitting}
-                          value={formData.phone}
-                          onChange={handleChange}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="modal-email" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Email *
-                        </label>
-                        <input
-                          id="modal-email"
-                          type="email"
-                          name="email"
-                          required
-                          disabled={submitting}
-                          value={formData.email}
-                          onChange={handleChange}
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
+                  <form onSubmit={handleDetailsSubmit}>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+                      {/* Left Column: Form Cards (7 cols on lg) */}
+                      <div className="lg:col-span-7 space-y-3 sm:space-y-3.5">
+                        
+                        {/* 1. Ticket Quantity Bar */}
+                        <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-[#FFF0E2] text-[#FF6600] flex items-center justify-center shrink-0">
+                              <Ticket className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="text-xs sm:text-sm font-bold text-[#1F1F1F] leading-tight">
+                                Standard Admission • {eventDetails.price}
+                              </div>
+                              <div className="text-[10px] sm:text-[11px] text-[#73685E]">
+                                3-Course Balti Meal & Networking Included
+                              </div>
+                            </div>
+                          </div>
 
-                    {/* Primary Buyer Row 2: Company | Role | Quantity */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                      <div>
-                        <label htmlFor="modal-company" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Company (Optional)
-                        </label>
-                        <input
-                          id="modal-company"
-                          type="text"
-                          name="company"
-                          disabled={submitting}
-                          value={formData.company}
-                          onChange={handleChange}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="modal-role" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Role (Optional)
-                        </label>
-                        <input
-                          id="modal-role"
-                          type="text"
-                          name="role"
-                          disabled={submitting}
-                          value={formData.role}
-                          onChange={handleChange}
-                          className={inputClass}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="modal-quantity" className="block text-xs font-semibold text-[#4a4a4a] mb-1">
-                          Tickets
-                        </label>
-                        <select
-                          id="modal-quantity"
-                          name="quantity"
-                          disabled={submitting}
-                          value={formData.quantity}
-                          onChange={handleChange}
-                          className={inputClass}
-                        >
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                            <option key={n} value={n}>
-                              {n} {n === 1 ? 'ticket' : 'tickets'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* ---------- DYNAMIC GUEST RECIPIENTS SECTION ---------- */}
-                    {formData.quantity > 1 && (
-                      <div className="space-y-3 pt-3 border-t border-[#E8D5C4]">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-sm sm:text-base font-bold text-[#1f1f1f]">
-                              Guest Recipient Details
-                            </h3>
-                            <p className="text-xs text-[#666]">
-                              Provide recipient info for each guest to send individual E-Tickets.
-                            </p>
+                          <div className="relative w-32 sm:w-36 shrink-0">
+                            <select
+                              id="modal-quantity"
+                              name="quantity"
+                              disabled={submitting}
+                              value={formData.quantity}
+                              onChange={handleChange}
+                              className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
+                            >
+                              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                                <option key={n} value={n}>
+                                  {n} {n === 1 ? 'ticket' : 'tickets'} ({currencySymbol}
+                                  {(unitPrice * n).toFixed(0)})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </div>
                           </div>
                         </div>
 
-                        {Array.from({ length: formData.quantity - 1 }).map((_, idx) => {
-                          const guestIndex = idx + 1;
-                          const currentGuest = guests[guestIndex] || { name: '', email: '', company: '', role: '' };
-                          return (
-                            <div
-                              key={guestIndex}
-                              className="p-3.5 sm:p-4 rounded-[14px] bg-[#FFF8F2] border border-[#F0E2D4] space-y-2.5"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#FF6600]">
-                                  Guest #{guestIndex + 1} Recipient
-                                </span>
-                                <span className="text-[11px] text-[#888]">Ticket #{guestIndex + 1}</span>
-                              </div>
+                        {/* 2. Primary Attendee (Ticket #1) Card */}
+                        <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] space-y-2.5">
+                          <div className="flex items-center justify-between pb-2 border-b border-[#F2E7DC]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#FF6600] text-white text-[10px] font-bold uppercase tracking-wider">
+                                Ticket #1
+                              </span>
+                              <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
+                                Lead Attendee & Contact
+                              </h3>
+                            </div>
+                            <span className="text-[10px] font-medium text-[#8C7E72] hidden sm:inline">
+                              Tickets sent to this email
+                            </span>
+                          </div>
 
-                              {/* 3-Column Horizontal Grid for Guest Details */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div>
-                                  <label
-                                    htmlFor={`guest-name-${guestIndex}`}
-                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
-                                  >
-                                    Guest Name *
-                                  </label>
-                                  <input
-                                    id={`guest-name-${guestIndex}`}
-                                    type="text"
-                                    required
-                                    disabled={submitting}
-                                    placeholder={`Full name`}
-                                    value={currentGuest.name}
-                                    onChange={(e) => handleGuestChange(guestIndex, 'name', e.target.value)}
-                                    className={inputClass}
-                                  />
+                          {/* Row 1: Name & Email */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                              <label htmlFor="modal-name" className="block text-[11px] font-semibold text-[#403934] mb-1">
+                                Full Name <span className="text-[#FF6600]">*</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8D80] pointer-events-none">
+                                  <User className="w-3.5 h-3.5" />
                                 </div>
-                                <div>
-                                  <label
-                                    htmlFor={`guest-email-${guestIndex}`}
-                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
-                                  >
-                                    Guest Email
-                                  </label>
-                                  <input
-                                    id={`guest-email-${guestIndex}`}
-                                    type="email"
-                                    disabled={submitting}
-                                    placeholder="Default: Primary email"
-                                    value={currentGuest.email}
-                                    onChange={(e) => handleGuestChange(guestIndex, 'email', e.target.value)}
-                                    className={inputClass}
-                                  />
-                                </div>
-                                <div>
-                                  <label
-                                    htmlFor={`guest-role-${guestIndex}`}
-                                    className="block text-[11px] font-semibold text-[#4a4a4a] mb-1"
-                                  >
-                                    Role / Company
-                                  </label>
-                                  <input
-                                    id={`guest-role-${guestIndex}`}
-                                    type="text"
-                                    disabled={submitting}
-                                    placeholder="Optional"
-                                    value={currentGuest.role}
-                                    onChange={(e) => handleGuestChange(guestIndex, 'role', e.target.value)}
-                                    className={inputClass}
-                                  />
-                                </div>
+                                <input
+                                  id="modal-name"
+                                  type="text"
+                                  name="name"
+                                  required
+                                  autoComplete="name"
+                                  placeholder="Alex Morgan"
+                                  disabled={submitting}
+                                  value={formData.name}
+                                  onChange={handleChange}
+                                  className="w-full h-9 sm:h-9.5 pl-8 pr-3 rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs sm:text-sm font-medium focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                />
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
 
-                    {error && <ErrorBox message={error} />}
+                            <div>
+                              <label htmlFor="modal-email" className="block text-[11px] font-semibold text-[#403934] mb-1">
+                                Email Address <span className="text-[#FF6600]">*</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8D80] pointer-events-none">
+                                  <Mail className="w-3.5 h-3.5" />
+                                </div>
+                                <input
+                                  id="modal-email"
+                                  type="email"
+                                  name="email"
+                                  required
+                                  autoComplete="email"
+                                  placeholder="alex@company.com"
+                                  disabled={submitting}
+                                  value={formData.email}
+                                  onChange={handleChange}
+                                  className="w-full h-9 sm:h-9.5 pl-8 pr-3 rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs sm:text-sm font-medium focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                />
+                              </div>
+                            </div>
+                          </div>
 
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-8 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed w-full sm:w-auto"
-                      >
-                        {submitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Preparing payment…
-                          </>
-                        ) : (
-                          <>Continue to payment</>
+                          {/* Row 2: Phone, Company, Role */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div>
+                              <label htmlFor="modal-phone" className="block text-[11px] font-semibold text-[#403934] mb-1">
+                                Phone <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8D80] pointer-events-none">
+                                  <Phone className="w-3.5 h-3.5" />
+                                </div>
+                                <input
+                                  id="modal-phone"
+                                  type="tel"
+                                  name="phone"
+                                  autoComplete="tel"
+                                  placeholder="+44 7123 456789"
+                                  disabled={submitting}
+                                  value={formData.phone}
+                                  onChange={handleChange}
+                                  className="w-full h-9 sm:h-9.5 pl-8 pr-3 rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs sm:text-sm font-medium focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label htmlFor="modal-company" className="block text-[11px] font-semibold text-[#403934] mb-1">
+                                Company <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8D80] pointer-events-none">
+                                  <Building2 className="w-3.5 h-3.5" />
+                                </div>
+                                <input
+                                  id="modal-company"
+                                  type="text"
+                                  name="company"
+                                  autoComplete="organization"
+                                  placeholder="Acme Ltd"
+                                  disabled={submitting}
+                                  value={formData.company}
+                                  onChange={handleChange}
+                                  className="w-full h-9 sm:h-9.5 pl-8 pr-3 rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs sm:text-sm font-medium focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label htmlFor="modal-role" className="block text-[11px] font-semibold text-[#403934] mb-1">
+                                Job Role <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9A8D80] pointer-events-none">
+                                  <Briefcase className="w-3.5 h-3.5" />
+                                </div>
+                                <input
+                                  id="modal-role"
+                                  type="text"
+                                  name="role"
+                                  autoComplete="organization-title"
+                                  placeholder="Director"
+                                  disabled={submitting}
+                                  value={formData.role}
+                                  onChange={handleChange}
+                                  className="w-full h-9 sm:h-9.5 pl-8 pr-3 rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs sm:text-sm font-medium focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Dynamic Guest Recipients Section */}
+                        {formData.quantity > 1 && (
+                          <div className="space-y-2.5 pt-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-[#FF6600]" />
+                                <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
+                                  Additional Guest Passes ({formData.quantity - 1})
+                                </h3>
+                              </div>
+                              <span className="text-[10px] text-[#8C7E72]">
+                                Emails optional (defaults to lead booker)
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              {Array.from({ length: formData.quantity - 1 }).map((_, idx) => {
+                                const guestIndex = idx + 1;
+                                const currentGuest =
+                                  guests[guestIndex] || { name: '', email: '', company: '', role: '' };
+                                return (
+                                  <motion.div
+                                    key={guestIndex}
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] space-y-2"
+                                  >
+                                    <div className="flex items-center justify-between border-b border-[#F2E7DC] pb-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-1.5 py-0.5 rounded bg-[#FFF0E2] text-[#FF6600] font-bold text-[10px] tracking-wide uppercase">
+                                          Guest #{guestIndex + 1}
+                                        </span>
+                                        <span className="text-[11px] font-semibold text-[#403934]">
+                                          Attendee Details
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] font-mono text-[#8C7E72]">
+                                        Ticket #{guestIndex + 1}
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                      <div>
+                                        <label
+                                          htmlFor={`guest-name-${guestIndex}`}
+                                          className="block text-[10px] font-semibold text-[#403934] mb-0.5"
+                                        >
+                                          Guest Name <span className="text-[#FF6600]">*</span>
+                                        </label>
+                                        <input
+                                          id={`guest-name-${guestIndex}`}
+                                          type="text"
+                                          required
+                                          disabled={submitting}
+                                          placeholder="Full name"
+                                          value={currentGuest.name}
+                                          onChange={(e) =>
+                                            handleGuestChange(guestIndex, 'name', e.target.value)
+                                          }
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label
+                                          htmlFor={`guest-email-${guestIndex}`}
+                                          className="block text-[10px] font-semibold text-[#403934] mb-0.5"
+                                        >
+                                          Guest Email <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                                        </label>
+                                        <input
+                                          id={`guest-email-${guestIndex}`}
+                                          type="email"
+                                          disabled={submitting}
+                                          placeholder="Direct ticket delivery"
+                                          value={currentGuest.email}
+                                          onChange={(e) =>
+                                            handleGuestChange(guestIndex, 'email', e.target.value)
+                                          }
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label
+                                          htmlFor={`guest-role-${guestIndex}`}
+                                          className="block text-[10px] font-semibold text-[#403934] mb-0.5"
+                                        >
+                                          Role / Company <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                                        </label>
+                                        <input
+                                          id={`guest-role-${guestIndex}`}
+                                          type="text"
+                                          disabled={submitting}
+                                          placeholder="e.g. Partner"
+                                          value={currentGuest.role}
+                                          onChange={(e) =>
+                                            handleGuestChange(guestIndex, 'role', e.target.value)
+                                          }
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                        />
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         )}
-                      </button>
+
+                        {error && <ErrorBox message={error} />}
+                      </div>
+
+                      {/* Right Column: Order Summary & Checkout Action (5 cols on lg) */}
+                      <div className="lg:col-span-5 space-y-3">
+                        <div className="rounded-[18px] bg-[#FFFDFB] border border-[#E8DCD0] p-4 sm:p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-3.5">
+                          <div className="flex items-center justify-between pb-2.5 border-b border-[#F2E7DC]">
+                            <div className="flex items-center gap-1.5">
+                              <Receipt className="w-3.5 h-3.5 text-[#FF6600]" />
+                              <h3 className="text-sm sm:text-base font-bold text-[#1F1F1F]">
+                                Order Summary
+                              </h3>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#22A06B] bg-[#EAF7EE] px-2 py-0.5 rounded-full">
+                              Instant Delivery
+                            </span>
+                          </div>
+
+                          {/* Itemized Breakdown */}
+                          <div className="space-y-2 text-xs">
+                            <div className="flex items-center justify-between text-[#403934]">
+                              <span>Standard Ticket × {formData.quantity}</span>
+                              <span className="font-semibold text-[#1F1F1F]">
+                                {currencySymbol}{calculatedSubtotal}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[#403934]">
+                              <span>3-Course Balti Meal</span>
+                              <span className="text-[#22A06B] font-medium">Included</span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[#403934]">
+                              <span>Booking & Service Fee</span>
+                              <span className="text-[#22A06B] font-medium">Free</span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[#403934]">
+                              <span>Taxes (VAT)</span>
+                              <span className="text-[#666]">Included</span>
+                            </div>
+
+                            {/* Total Line */}
+                            <div className="pt-2.5 border-t border-[#F2E7DC] flex items-baseline justify-between">
+                              <div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#73685E] block">
+                                  Total Due
+                                </span>
+                                <span className="text-[10px] text-[#8C7E72]">
+                                  {formData.quantity} {formData.quantity === 1 ? 'attendee pass' : 'attendee passes'}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xl sm:text-2xl font-extrabold text-[#FF6600] tracking-tight">
+                                  {currencySymbol}{calculatedSubtotal}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* CTA Button */}
+                          <div className="pt-1">
+                            <button
+                              type="submit"
+                              disabled={submitting}
+                              className="w-full inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] bg-gradient-to-r from-[#FF6600] to-[#F25A00] hover:from-[#E55C00] hover:to-[#DE4F00] text-white font-bold text-sm transition-all shadow-[0_3px_12px_rgba(255,102,0,0.3)] hover:shadow-[0_5px_18px_rgba(255,102,0,0.4)] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              {submitting ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Securing booking…</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Continue to payment</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Trust Badges */}
+                          <div className="pt-1.5 border-t border-[#F2E7DC] space-y-1 text-[10px] text-[#73685E]">
+                            <div className="flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#22A06B] shrink-0" />
+                              <span>256-bit SSL encrypted & secure checkout</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Lock className="w-3.5 h-3.5 text-[#FF6600] shrink-0" />
+                              <span>Official Stripe verified payment gateway</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </form>
                 )}
@@ -540,6 +792,10 @@ export function TicketModal() {
                   <Elements stripe={stripePromise} options={elementsOptions}>
                     <PaymentStep
                       session={session}
+                      eventTitle={eventDetails.title}
+                      quantity={formData.quantity}
+                      buyerName={formData.name}
+                      buyerEmail={formData.email}
                       onPaid={handlePaid}
                       onBack={() => {
                         setError(null);
@@ -556,6 +812,71 @@ export function TicketModal() {
         </div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Checkout Stepper Component:
+ * Clean dual-step breadcrumb progress bar showing 01 Your Details → 02 Payment.
+ */
+function CheckoutStepper({ step }: { step: Step }) {
+  const isDetails = step === 'details';
+  const isPayment = step === 'payment';
+  const isDone = step === 'done';
+
+  return (
+    <div className="flex items-center gap-2 sm:gap-3 py-1 border-b border-[#EADBCC] mb-3">
+      {/* Step 1 */}
+      <div className={`flex items-center gap-2 transition-all ${isDetails ? 'opacity-100' : 'opacity-85'}`}>
+        <div
+          className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all shadow-xs ${
+            isDetails
+              ? 'bg-[#FF6600] text-white ring-3 ring-[#FF6600]/15'
+              : 'bg-[#22A06B] text-white'
+          }`}
+        >
+          {isDetails ? '1' : <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+        </div>
+        <div>
+          <span className="text-xs sm:text-sm font-bold text-[#1F1F1F] block leading-tight">
+            1. Your Details
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Connector */}
+      <div className="flex-1 max-w-[40px] sm:max-w-[60px] h-[2px] rounded-full bg-[#DDD0C2] relative overflow-hidden mx-1">
+        <div
+          className={`h-full bg-[#FF6600] transition-all duration-300 ${
+            isPayment || isDone ? 'w-full' : 'w-0'
+          }`}
+        />
+      </div>
+
+      {/* Step 2 */}
+      <div
+        className={`flex items-center gap-2 transition-all ${
+          isPayment ? 'opacity-100' : isDone ? 'opacity-85' : 'opacity-55'
+        }`}
+      >
+        <div
+          className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all shadow-xs ${
+            isPayment
+              ? 'bg-[#FF6600] text-white ring-3 ring-[#FF6600]/15'
+              : isDone
+              ? 'bg-[#22A06B] text-white'
+              : 'bg-[#DDD0C2] text-[#7A6A5A]'
+          }`}
+        >
+          {isDone ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : '2'}
+        </div>
+        <div>
+          <span className="text-xs sm:text-sm font-bold text-[#1F1F1F] block leading-tight">
+            2. Payment
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -613,46 +934,51 @@ function SuccessStep({
   };
 
   const calUrl = details ? calendarUrl(ticketData, ticketNumber) : null;
+  const [downloading, setDownloading] = useState(false);
 
-  const handleDownloadTicket = () => {
-    const dayText = details?.startsAt
-      ? new Intl.DateTimeFormat('en-GB', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'Europe/London',
-        }).format(new Date(details.startsAt))
-      : 'Wednesday 9th September 2026';
+  const handleDownloadTicket = async () => {
+    if (downloading) return;
+    setDownloading(true);
 
-    const timeText = details?.startsAt ? '6:30pm – 9:30pm' : '6:30pm – 9:30pm';
+    try {
+      const dayText = details?.startsAt
+        ? new Intl.DateTimeFormat('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/London',
+          }).format(new Date(details.startsAt))
+        : 'Wednesday 9th September 2026';
 
-    const guestList = guests && guests.length > 0
-      ? guests
-      : [{ name: formData.name, email: formData.email, company: formData.company, role: formData.role }];
+      const timeText = details?.startsAt ? '6:30pm – 9:30pm' : '6:30pm – 9:30pm';
 
-    const html = generateETicketHTML({
-      ticketNumber,
-      eventTitle: details?.title || eventTitle,
-      venue: details?.venue || 'The Farmhouse, Coventry',
-      date: dayText,
-      time: timeText,
-      total: formatPence(amountPence, currency),
-      primaryBuyer: {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        company: formData.company,
-        role: formData.role,
-      },
-      guests: guestList,
-      paymentRef: paymentIntentId || undefined,
-    });
+      const guestList =
+        guests && guests.length > 0
+          ? guests
+          : [{ name: formData.name, email: formData.email, company: formData.company, role: formData.role }];
 
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(html);
-      printWin.document.close();
+      await downloadTicketPDF({
+        ticketNumber,
+        eventTitle: details?.title || eventTitle,
+        venue: details?.venue || 'The Farmhouse, Coventry',
+        date: dayText,
+        time: timeText,
+        total: formatPence(amountPence, currency),
+        primaryBuyer: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          role: formData.role,
+        },
+        guests: guestList,
+        paymentRef: paymentIntentId || undefined,
+      });
+    } catch (err) {
+      console.error('Failed to generate ticket PDF:', err);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -680,18 +1006,28 @@ function SuccessStep({
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <button
           onClick={handleDownloadTicket}
+          disabled={downloading}
           type="button"
-          className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all shadow-sm hover:shadow"
+          className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[12px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all shadow-sm hover:shadow cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <Download className="w-4 h-4 text-[#FF6600]" />
-          Download ticket
+          {downloading ? (
+            <>
+              <Loader2 className="w-4 h-4 text-[#FF6600] animate-spin" />
+              <span>Downloading PDF...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-[#FF6600]" />
+              <span>Download ticket</span>
+            </>
+          )}
         </button>
         {calUrl && (
           <a
             href={calUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all"
+            className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 rounded-[12px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all cursor-pointer"
           >
             <CalendarPlus className="w-4 h-4" />
             Add to calendar
@@ -699,7 +1035,7 @@ function SuccessStep({
         )}
         <button
           onClick={onClose}
-          className="flex-1 h-11 sm:h-12 px-6 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg"
+          className="flex-1 h-11 sm:h-12 px-6 rounded-[12px] bg-gradient-to-r from-[#FF6600] to-[#F25A00] hover:from-[#E55C00] hover:to-[#DE4F00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg cursor-pointer"
         >
           Done
         </button>
@@ -711,12 +1047,20 @@ function SuccessStep({
 /** The card form itself — must live inside <Elements> to use the Stripe hooks. */
 function PaymentStep({
   session,
+  eventTitle,
+  quantity,
+  buyerName,
+  buyerEmail,
   onPaid,
   onBack,
   submitting,
   setSubmitting,
 }: {
   session: PaymentSession;
+  eventTitle: string;
+  quantity: number;
+  buyerName: string;
+  buyerEmail: string;
   onPaid: (intentId: string | null, fallback: string) => void;
   onBack: () => void;
   submitting: boolean;
@@ -763,104 +1107,145 @@ function PaymentStep({
     setSubmitting(false);
   };
 
-  return (
-    <form onSubmit={handlePay} className="space-y-5">
-      {/* Amount summary */}
-      <div className="flex items-center justify-between bg-[#FFF8F2] border border-[#F0E2D4] rounded-[12px] px-5 py-4">
-        <span className="text-sm text-[#666]">Amount due</span>
-        <span className="text-xl sm:text-2xl font-bold text-[#1f1f1f]">
-          {formatPence(session.amountPence, session.currency)}
-        </span>
-      </div>
+  const totalFormatted = formatPence(session.amountPence, session.currency);
 
-      {/* Stripe's card / wallet form */}
-      <div className="min-h-[160px]">
-        {!ready && (
-          <div className="flex items-center justify-center h-[160px] text-[#999]">
-            <Loader2 className="w-6 h-6 animate-spin" />
+  return (
+    <form onSubmit={handlePay}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+        {/* Left Column: Stripe Card & Wallet Form */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="p-4 sm:p-4.5 rounded-[18px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#F2E7DC]">
+              <div className="flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-[#FF6600]" />
+                <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
+                  Payment Method
+                </h3>
+              </div>
+              <span className="text-[10px] font-medium text-[#8C7E72] flex items-center gap-1">
+                <Lock className="w-3 h-3 text-[#22A06B]" /> 256-Bit Encrypted
+              </span>
+            </div>
+
+            {/* Stripe's card / wallet form */}
+            <div className="min-h-[160px]">
+              {!ready && (
+                <div className="flex flex-col items-center justify-center h-[160px] text-[#8C7E72] gap-1.5">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#FF6600]" />
+                  <span className="text-xs">Loading secure payment options…</span>
+                </div>
+              )}
+              <PaymentElement
+                onReady={() => setReady(true)}
+                options={{ layout: 'tabs' }}
+              />
+            </div>
+
+            {error && <ErrorBox message={error} />}
+
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2.5 pt-2 border-t border-[#F2E7DC]">
+              <button
+                type="button"
+                onClick={onBack}
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-[10px] border border-[#DDD0C2] hover:bg-[#FFF8F2] text-[#403934] font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Details</span>
+              </button>
+
+              <button
+                type="submit"
+                disabled={!stripe || !ready || submitting}
+                className="flex-1 inline-flex items-center justify-center gap-2 h-10 sm:h-10.5 px-6 rounded-[10px] bg-gradient-to-r from-[#FF6600] to-[#F25A00] hover:from-[#E55C00] hover:to-[#DE4F00] text-white font-bold text-xs sm:text-sm transition-all shadow-[0_3px_12px_rgba(255,102,0,0.3)] hover:shadow-[0_5px_18px_rgba(255,102,0,0.4)] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing payment…</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Pay {totalFormatted}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        )}
-        <PaymentElement
-          onReady={() => setReady(true)}
-          options={{ layout: 'tabs' }}
-        />
+
+          <p className="flex items-center justify-center gap-1.5 text-[10px] text-[#73685E]">
+            <ShieldCheck className="w-3 h-3 text-[#22A06B]" />
+            Secured by Stripe. Your card numbers never touch our servers.
+          </p>
+        </div>
+
+        {/* Right Column: Order Summary Recap */}
+        <div className="lg:col-span-5 space-y-3">
+          <div className="rounded-[18px] bg-[#FFFDFB] border border-[#E8DCD0] p-4 sm:p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#F2E7DC]">
+              <div className="flex items-center gap-1.5">
+                <Receipt className="w-3.5 h-3.5 text-[#FF6600]" />
+                <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
+                  Booking Summary
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-[#8C7E72]">
+                Ref: {session.bookingId.slice(0, 8).toUpperCase()}
+              </span>
+            </div>
+
+            <div className="bg-[#FAF3EC] rounded-[10px] p-2.5 border border-[#EADBCC] text-[11px] space-y-0.5">
+              <div className="font-bold text-[#1F1F1F] text-xs leading-snug">
+                {eventTitle}
+              </div>
+              <div className="text-[#73685E]">
+                Lead Booker: <span className="font-semibold text-[#1F1F1F]">{buyerName}</span>
+              </div>
+              <div className="text-[#73685E]">
+                Tickets sent to: <span className="font-semibold text-[#1F1F1F]">{buyerEmail}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[#403934]">
+                <span>Total Attendees</span>
+                <span className="font-semibold text-[#1F1F1F]">
+                  {quantity} {quantity === 1 ? 'ticket' : 'tickets'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[#403934]">
+                <span>Dining & Networking</span>
+                <span className="text-[#22A06B] font-medium">Included</span>
+              </div>
+
+              <div className="flex items-center justify-between text-[#403934]">
+                <span>Processing Fees</span>
+                <span className="text-[#22A06B] font-medium">Free</span>
+              </div>
+
+              <div className="pt-2 border-t border-[#F2E7DC] flex items-baseline justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#73685E]">
+                  Amount Due
+                </span>
+                <span className="text-xl sm:text-2xl font-extrabold text-[#FF6600] tracking-tight">
+                  {totalFormatted}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {error && <ErrorBox message={error} />}
-
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 pt-1">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={submitting}
-          className="inline-flex items-center justify-center gap-1.5 h-11 sm:h-12 px-5 rounded-[10px] border border-[#E5D5C5] hover:bg-[#FFF8F2] text-[#4a4a4a] font-semibold text-sm transition-all disabled:opacity-50"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-
-        <button
-          type="submit"
-          disabled={!stripe || !ready || submitting}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-8 rounded-[10px] bg-[#FF6600] hover:bg-[#E55C00] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing…
-            </>
-          ) : (
-            <>Pay {formatPence(session.amountPence, session.currency)}</>
-          )}
-        </button>
-      </div>
-
-      <p className="flex items-center justify-center gap-1.5 text-xs text-[#8a8a8a] pt-1">
-        <Lock className="w-3 h-3" />
-        Secured by Stripe. Your card details never touch our servers.
-      </p>
     </form>
-  );
-}
-
-function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
-  return (
-    <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-        active || done ? 'bg-[#FF6600] text-white' : 'bg-[#E8D5C4] text-[#8a7a6a]'
-      }`}
-    >
-      {done ? '✓' : label}
-    </div>
   );
 }
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-[10px] bg-[#FDECEA] border border-[#F5C6C1] px-4 py-3 text-sm text-[#A6221D]">
-      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-      <span>{message}</span>
-    </div>
-  );
-}
-
-function SummaryRow({
-  label,
-  value,
-  bold,
-  mono,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-[#777]">{label}</span>
-      <span className={`${bold ? 'font-bold' : ''} ${mono ? 'font-mono' : ''} text-[#1f1f1f]`}>
-        {value}
-      </span>
+    <div className="flex items-start gap-2.5 rounded-[12px] bg-[#FEF2F2] border border-[#FCA5A5] px-4 py-3 text-sm text-[#991B1B]">
+      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-[#DC2626]" />
+      <span className="font-medium">{message}</span>
     </div>
   );
 }
@@ -872,3 +1257,4 @@ function formatPence(pence?: number, currency = 'gbp'): string {
     currency: (currency || 'gbp').toUpperCase(),
   }).format(pence / 100);
 }
+

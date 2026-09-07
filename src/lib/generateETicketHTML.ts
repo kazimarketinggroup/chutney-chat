@@ -26,7 +26,7 @@ export interface ETicketPrintData {
   paymentRef?: string;
 }
 
-export function generateETicketHTML(data: ETicketPrintData): string {
+export function generateETicketHTML(data: ETicketPrintData, options?: { autoPrint?: boolean }): string {
   const primaryName = data.primaryBuyer.name || 'Valued Guest';
   const primaryEmail = data.primaryBuyer.email || '';
   const totalQuantity = Math.max(data.guests.length, 1);
@@ -153,7 +153,7 @@ export function generateETicketHTML(data: ETicketPrintData): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f4f2ef;
+      background-color: #ffffff;
       color: #1f1f1f;
       padding: 30px 20px;
       -webkit-print-color-adjust: exact !important;
@@ -162,6 +162,8 @@ export function generateETicketHTML(data: ETicketPrintData): string {
     .doc-container {
       max-width: 820px;
       margin: 0 auto;
+      padding: 24px;
+      background-color: #ffffff;
     }
     .doc-header {
       display: flex;
@@ -381,15 +383,14 @@ export function generateETicketHTML(data: ETicketPrintData): string {
       <p>&bull; Each ticket contains a unique reference ID and QR code. Unique tickets are issued per guest attendee.</p>
       <p>&bull; For support or booking queries, contact <strong>Chutney &amp; Chat Team</strong>.</p>
     </div>
-  </div>
-
+  </div>${options?.autoPrint ? `
   <script>
     window.onload = function() {
       setTimeout(function() {
         window.print();
       }, 400);
     };
-  </script>
+  </script>` : ''}
 </body>
 </html>`;
 }

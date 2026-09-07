@@ -40,19 +40,53 @@ a, button, input, select, textarea {
               box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Custom Scrollbar */
+/* Eliminate harsh browser outline strokes and focus flashes */
+input, select, textarea, button {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+input:focus, input:focus-visible,
+select:focus, select:focus-visible,
+textarea:focus, textarea:focus-visible,
+button:focus, button:focus-visible {
+  outline: none !important;
+  box-shadow: none;
+}
+
+/* Global Smooth Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #141414;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
+  background: rgba(140, 126, 114, 0.35);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #ee6422;
+}
+
+/* Modal specific ultra-smooth refined scrollbar */
+.modal-smooth-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 150, 130, 0.35) transparent;
+}
+.modal-smooth-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.modal-smooth-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-smooth-scroll::-webkit-scrollbar-thumb {
+  background: rgba(180, 150, 130, 0.35);
+  border-radius: 9999px;
+}
+.modal-smooth-scroll::-webkit-scrollbar-thumb:hover {
+  background: #ff6600;
 }
 
 /* Utilities & Glassmorphism */
