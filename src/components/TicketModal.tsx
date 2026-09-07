@@ -246,9 +246,16 @@ export function TicketModal() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.clientSecret) {
-        throw new Error(json.error || 'Could not start checkout. Please try again.');
+      let json: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        json = await res.json();
+      } else {
+        throw new Error('Unable to start checkout right now. Please try again.');
+      }
+
+      if (!res.ok || !json?.clientSecret) {
+        throw new Error(json?.error || 'Could not start checkout. Please try again.');
       }
 
       setSession(json);
