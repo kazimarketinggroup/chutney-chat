@@ -53,6 +53,10 @@ export default function SummerBusinessBBQPage() {
             <span>Connection</span>
           </div>
 
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 border border-white/25 text-white text-xs font-semibold backdrop-blur-md">
+            <span>Event Concluded • 9th September 2026</span>
+          </div>
+
           {/* Title */}
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
             Summer Business BBQ
@@ -160,27 +164,16 @@ export default function SummerBusinessBBQPage() {
               </div>
 
               {/* Buttons Row */}
-              <div className="flex flex-row items-center gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    openModal({
-                      title: 'Wednesday 9th September 2026 - The Farmhouse Coventry',
-                      price: '£40.00',
-                      eventSlug: 'summer-business-bbq',
-                    })
-                  }
-                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm transition-all shadow-sm text-center cursor-pointer"
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <Link
+                  href="/events/business-networking-evening"
+                  className="w-full sm:flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm transition-all shadow-sm text-center"
                 >
-                  Buy Now
-                </button>
-                <AddToCalendarButton
-                  title="Summer Business BBQ - Chutney & Chat"
-                  description="Join us for the Chutney & Chat Summer Business BBQ! Meet new business owners, expand your network, and enjoy an evening of inspiring networking and delicious food at The Farmhouse, Coventry."
-                  location="The Farmhouse, 215 Beechwood Avenue, Coventry CV5 6HB, United Kingdom"
-                  startDate="2026-09-09T18:30:00"
-                  endDate="2026-09-09T21:30:00"
-                />
+                  View Next Event: 29th Sept
+                </Link>
+                <div className="text-xs text-[#888888] font-medium text-center sm:text-left">
+                  This event has concluded.
+                </div>
               </div>
 
             </div>

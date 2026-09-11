@@ -80,13 +80,13 @@ export default function AboutPage() {
               </h1>
 
               <div className="space-y-1 text-white/90 text-base sm:text-lg font-light">
-                <p>Next Event: Wednesday 9th September 2026</p>
-                <p>at The Farmhouse Coventry</p>
-                <p>6:30pm - 9:30pm</p>
+                <p>Next Event: Tuesday 29th September 2026</p>
+                <p>at Tipu Sultan Leicester</p>
+                <p>6:30pm - 10:30pm</p>
               </div>
 
               {/* Live Countdown Timer */}
-              <EventCountdown targetDate="2026-09-09T18:30:00" />
+              <EventCountdown targetDate="2026-09-29T18:30:00" />
 
               <div className="pt-2">
                 <Link

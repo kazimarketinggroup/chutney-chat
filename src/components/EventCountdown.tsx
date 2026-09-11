@@ -6,8 +6,8 @@ interface EventCountdownProps {
   targetDate?: string;
 }
 
-// Default target: Wednesday 9th September 2026 at 6:30pm UK Time (BST: UTC+1)
-const DEFAULT_UK_TARGET = '2026-09-09T18:30:00+01:00';
+// Default target: Tuesday 29th September 2026 at 6:30pm UK Time (BST: UTC+1)
+const DEFAULT_UK_TARGET = '2026-09-29T18:30:00+01:00';
 
 function getTimeRemaining(targetDateStr: string) {
   try {

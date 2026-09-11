@@ -1,0 +1,44 @@
+========================================================================
+HOW TO SET UP STRIPE WEBHOOK & GET SIGNING SECRET
+========================================================================
+
+1. LOG INTO STRIPE
+   - Open: https://dashboard.stripe.com
+   - Make sure you are in "Live mode" (check the toggle at the top right).
+
+2. GO TO WEBHOOKS
+   - Direct link: https://dashboard.stripe.com/webhooks
+   - Or click "Developers" in top menu -> then click "Webhooks" on the left.
+
+3. ADD ENDPOINT
+   - Click the "+ Add endpoint" button (top right).
+
+4. ENTER ENDPOINT URL
+   - In the "Endpoint URL" box, enter:
+     https://chutney.vercel.app/api/webhooks/stripe
+
+     (Note: If you have connected your custom domain, use:
+      https://YOUR-DOMAIN.com/api/webhooks/stripe)
+
+5. SELECT EVENTS TO LISTEN TO
+   - Click "+ Select events".
+   - Search and check these 4 events:
+     [x] payment_intent.succeeded
+     [x] payment_intent.payment_failed
+     [x] payment_intent.canceled
+     [x] charge.refunded
+   - Click "Add events" at the bottom of the popup.
+
+6. SAVE & COPY SIGNING SECRET
+   - Click "Add endpoint" to finish creating it.
+   - On the new webhook screen, find the "Signing secret" section.
+   - Click "Reveal" (it will start with "whsec_...").
+   - Copy and send that "whsec_..." key.
+
+========================================================================
+SUMMARY OF KEYS WE NEED TO GO LIVE:
+========================================================================
+1. Publishable Key:   pk_live_...
+2. Secret / Key:      sk_live_... (or Restricted key rk_live_...)
+3. Webhook Secret:    whsec_...   (from Step 6 above)
+========================================================================

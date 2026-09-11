@@ -5,7 +5,7 @@ import { getSupabaseAdmin, type EventRow } from '@/lib/supabase';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_QUANTITY = 10;
+const MAX_QUANTITY = 100;
 
 interface GuestInput {
   name?: string;
@@ -76,17 +76,12 @@ export async function POST(req: Request) {
       guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
     } else {
       const guestObj = rawGuests[i];
-      const gName = clean(guestObj?.name, 120);
+      // If guest name is provided, use it. Otherwise, default gracefully to "Guest #[n] (Booked by [name])"
+      const gName = clean(guestObj?.name, 120) || `Guest #${i + 1} (${name})`;
       const gEmail = clean(guestObj?.email, 200).toLowerCase() || email;
       const gCompany = clean(guestObj?.company, 160) || company;
       const gRole = clean(guestObj?.role, 160);
 
-      if (!gName) {
-        return NextResponse.json(
-          { error: `Please provide the name for Guest #${i + 1}.` },
-          { status: 400 }
-        );
-      }
       if (gEmail && !EMAIL_RE.test(gEmail)) {
         return NextResponse.json(
           { error: `Please provide a valid email address for Guest #${i + 1}.` },

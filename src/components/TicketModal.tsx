@@ -27,6 +27,9 @@ import {
   Receipt,
   Users,
   ChevronDown,
+  Plus,
+  Minus,
+  Trash2,
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -127,6 +130,7 @@ export function TicketModal() {
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCustomQuantity, setIsCustomQuantity] = useState(false);
   // Set once payment succeeds; the ticket view polls this for the real number.
   const [paidIntentId, setPaidIntentId] = useState<string | null>(null);
   const [fallbackTicketNumber, setFallbackTicketNumber] = useState('');
@@ -176,6 +180,7 @@ export function TicketModal() {
     setStep('details');
     setFormData(EMPTY_FORM);
     setGuests([]);
+    setIsCustomQuantity(false);
     setSession(null);
     setSubmitting(false);
     setError(null);
@@ -413,7 +418,7 @@ export function TicketModal() {
                       <div className="lg:col-span-7 space-y-3 sm:space-y-3.5">
                         
                         {/* 1. Ticket Quantity Bar */}
-                        <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] gap-2.5 sm:gap-0">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-lg bg-[#FFF0E2] text-[#FF6600] flex items-center justify-center shrink-0">
                               <Ticket className="w-3.5 h-3.5" />
@@ -423,30 +428,138 @@ export function TicketModal() {
                                 Standard Admission • {eventDetails.price}
                               </div>
                               <div className="text-[10px] sm:text-[11px] text-[#73685E]">
-                                3-Course Balti Meal & Networking Included
+                                3-Course Balti Meal &amp; Networking Included
                               </div>
                             </div>
                           </div>
 
-                          <div className="relative w-32 sm:w-36 shrink-0">
-                            <select
-                              id="modal-quantity"
-                              name="quantity"
-                              disabled={submitting}
-                              value={formData.quantity}
-                              onChange={handleChange}
-                              className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
-                            >
-                              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                                <option key={n} value={n}>
-                                  {n} {n === 1 ? 'ticket' : 'tickets'} ({currencySymbol}
-                                  {(unitPrice * n).toFixed(0)})
-                                </option>
-                              ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </div>
+                          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                            {!isCustomQuantity ? (
+                              <>
+                                <div className="relative w-32 sm:w-36 shrink-0">
+                                  <select
+                                    id="modal-quantity"
+                                    name="quantity"
+                                    disabled={submitting}
+                                    value={formData.quantity <= 10 ? formData.quantity : 'more'}
+                                    onChange={(e) => {
+                                      if (e.target.value === 'more') {
+                                        setIsCustomQuantity(true);
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          quantity: Math.max(prev.quantity, 11),
+                                        }));
+                                      } else {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          quantity: Number(e.target.value),
+                                        }));
+                                      }
+                                    }}
+                                    className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
+                                  >
+                                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                                      <option key={n} value={n}>
+                                        {n} {n === 1 ? 'ticket' : 'tickets'} ({currencySymbol}
+                                        {(unitPrice * n).toFixed(0)})
+                                      </option>
+                                    ))}
+                                    <option value="more">10+ (Add More)...</option>
+                                  </select>
+                                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={submitting}
+                                  onClick={() => {
+                                    setIsCustomQuantity(true);
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      quantity: prev.quantity >= 10 ? prev.quantity + 1 : 11,
+                                    }));
+                                  }}
+                                  title="Add 10+ tickets or group booking"
+                                  className="h-8 sm:h-9 px-2.5 rounded-[9px] bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold text-xs flex items-center gap-1 border border-[#F5D8C0] transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>10+</span>
+                                </button>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-1.5 bg-white border border-[#DDD0C2] rounded-[9px] p-1 shadow-sm">
+                                <button
+                                  type="button"
+                                  disabled={submitting || formData.quantity <= 1}
+                                  onClick={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      quantity: Math.max(1, prev.quantity - 1),
+                                    }));
+                                  }}
+                                  className="w-7 h-7 rounded-md bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
+                                  aria-label="Decrease tickets"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+
+                                <div className="flex items-center px-1">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    disabled={submitting}
+                                    value={formData.quantity}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      if (isNaN(val)) {
+                                        setFormData((prev) => ({ ...prev, quantity: 1 }));
+                                      } else {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          quantity: Math.min(100, Math.max(1, val)),
+                                        }));
+                                      }
+                                    }}
+                                    className="w-9 text-center text-xs font-bold text-[#1F1F1F] bg-transparent outline-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                  <span className="text-[11px] font-semibold text-[#73685E] pr-1">
+                                    tickets
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={submitting || formData.quantity >= 100}
+                                  onClick={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      quantity: Math.min(100, prev.quantity + 1),
+                                    }));
+                                  }}
+                                  className="w-7 h-7 rounded-md bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
+                                  aria-label="Increase tickets"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={submitting}
+                                  onClick={() => {
+                                    setIsCustomQuantity(false);
+                                    if (formData.quantity > 10) {
+                                      setFormData((prev) => ({ ...prev, quantity: 10 }));
+                                    }
+                                  }}
+                                  className="ml-1 text-[10px] text-[#8C7E72] hover:text-[#FF6600] hover:underline px-1 whitespace-nowrap cursor-pointer"
+                                >
+                                  1–10 list
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -585,6 +698,21 @@ export function TicketModal() {
                           </div>
                         </div>
 
+                        {/* Prompt to add more attendees if quantity is 1 */}
+                        {formData.quantity === 1 && (
+                          <button
+                            type="button"
+                            disabled={submitting}
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, quantity: 2 }));
+                            }}
+                            className="w-full py-2.5 px-3 rounded-[12px] border border-dashed border-[#DDD0C2] hover:border-[#FF6600] bg-[#FFFDFB] hover:bg-[#FFF5EB] text-[#73685E] hover:text-[#FF6600] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Guest / Buy Multiple Tickets (+{currencySymbol}{unitPrice.toFixed(0)})</span>
+                          </button>
+                        )}
+
                         {/* 3. Dynamic Guest Recipients Section */}
                         {formData.quantity > 1 && (
                           <div className="space-y-2.5 pt-1">
@@ -596,7 +724,7 @@ export function TicketModal() {
                                 </h3>
                               </div>
                               <span className="text-[10px] text-[#8C7E72]">
-                                Emails optional (defaults to lead booker)
+                                Optional • Guest names default automatically
                               </span>
                             </div>
 
@@ -622,9 +750,26 @@ export function TicketModal() {
                                           Attendee Details
                                         </span>
                                       </div>
-                                      <span className="text-[10px] font-mono text-[#8C7E72]">
-                                        Ticket #{guestIndex + 1}
-                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-mono text-[#8C7E72]">
+                                          Ticket #{guestIndex + 1}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          disabled={submitting}
+                                          onClick={() => {
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              quantity: Math.max(1, prev.quantity - 1),
+                                            }));
+                                            setGuests((prev) => prev.filter((_, i) => i !== guestIndex));
+                                          }}
+                                          title="Remove this guest pass"
+                                          className="p-1 rounded text-[#8C7E72] hover:text-[#D32F2F] hover:bg-[#FDECEC] transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -633,19 +778,18 @@ export function TicketModal() {
                                           htmlFor={`guest-name-${guestIndex}`}
                                           className="block text-[10px] font-semibold text-[#403934] mb-0.5"
                                         >
-                                          Guest Name <span className="text-[#FF6600]">*</span>
+                                          Guest Name <span className="text-[#8C7E72] font-normal">(Optional)</span>
                                         </label>
                                         <input
                                           id={`guest-name-${guestIndex}`}
                                           type="text"
-                                          required
                                           disabled={submitting}
-                                          placeholder="Full name"
+                                          placeholder={`Guest #${guestIndex + 1} Name`}
                                           value={currentGuest.name}
                                           onChange={(e) =>
                                             handleGuestChange(guestIndex, 'name', e.target.value)
                                           }
-                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none transition-colors duration-150 disabled:opacity-60"
                                         />
                                       </div>
 
@@ -665,7 +809,7 @@ export function TicketModal() {
                                           onChange={(e) =>
                                             handleGuestChange(guestIndex, 'email', e.target.value)
                                           }
-                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none transition-colors duration-150 disabled:opacity-60"
                                         />
                                       </div>
 
@@ -685,13 +829,34 @@ export function TicketModal() {
                                           onChange={(e) =>
                                             handleGuestChange(guestIndex, 'role', e.target.value)
                                           }
-                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none focus:outline-none focus-visible:outline-none transition-colors duration-150 disabled:opacity-60"
+                                          className="w-full h-8 sm:h-8.5 px-2.5 rounded-[8px] bg-white border border-[#DDD0C2] text-[#1F1F1F] placeholder:text-[#A89A8A] text-xs focus:border-[#FF6600] outline-none transition-colors duration-150 disabled:opacity-60"
                                         />
                                       </div>
                                     </div>
                                   </motion.div>
                                 );
                               })}
+
+                              {/* Plus button to add more attendees */}
+                              <button
+                                type="button"
+                                disabled={submitting || formData.quantity >= 100}
+                                onClick={() => {
+                                  if (!isCustomQuantity && formData.quantity >= 10) {
+                                    setIsCustomQuantity(true);
+                                  }
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    quantity: Math.min(100, prev.quantity + 1),
+                                  }));
+                                }}
+                                className="w-full py-2.5 px-3 rounded-[12px] border-2 border-dashed border-[#F5D8C0] hover:border-[#FF6600] bg-[#FFFBF8] hover:bg-[#FFF5EB] text-[#FF6600] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer group active:scale-[0.99]"
+                              >
+                                <div className="w-5 h-5 rounded-full bg-[#FFE8D6] group-hover:bg-[#FF6600] group-hover:text-white flex items-center justify-center transition-colors">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </div>
+                                <span>Add Another Guest / Ticket (+{currencySymbol}{unitPrice.toFixed(0)})</span>
+                              </button>
                             </div>
                           </div>
                         )}
@@ -956,9 +1121,9 @@ function SuccessStep({
             year: 'numeric',
             timeZone: 'Europe/London',
           }).format(new Date(details.startsAt))
-        : 'Wednesday 9th September 2026';
+        : (details?.title?.includes('Coventry') ? 'Wednesday 9th September 2026' : 'Tuesday 29th September 2026');
 
-      const timeText = details?.startsAt ? '6:30pm – 9:30pm' : '6:30pm – 9:30pm';
+      const timeText = details?.title?.includes('Coventry') ? '6:30pm – 9:30pm' : '6:30pm – 10:30pm';
 
       const guestList =
         guests && guests.length > 0
@@ -968,7 +1133,7 @@ function SuccessStep({
       await downloadTicketPDF({
         ticketNumber,
         eventTitle: details?.title || eventTitle,
-        venue: details?.venue || 'The Farmhouse, Coventry',
+        venue: details?.venue || (details?.title?.includes('Coventry') ? 'The Farmhouse, Coventry' : 'Tipu Sultan, Leicester'),
         date: dayText,
         time: timeText,
         total: formatPence(amountPence, currency),

@@ -83,22 +83,22 @@ export default function HomePage() {
               </h1>
 
               <div className="space-y-1 text-white/90 text-base sm:text-lg font-light">
-                <p>Next Event: Wednesday 9th September 2026</p>
-                <p>at The Farmhouse Coventry</p>
-                <p>6:30pm - 9:30pm</p>
+                <p>Next Event: Tuesday 29th September 2026</p>
+                <p>at Tipu Sultan Leicester</p>
+                <p>6:30pm - 10:30pm</p>
               </div>
 
               {/* Live Countdown Timer */}
-              <EventCountdown targetDate="2026-09-09T18:30:00" />
+              <EventCountdown targetDate="2026-09-29T18:30:00" />
 
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() =>
                     openModal({
-                      title: 'Wednesday 9th September 2026 - The Farmhouse Coventry',
-                      price: '£40.00',
-                      eventSlug: 'summer-business-bbq',
+                      title: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
+                      price: '£35.00',
+                      eventSlug: 'business-networking-evening',
                     })
                   }
                   className="inline-flex items-center justify-center h-[44px] px-8 rounded-md bg-white text-[#2d2d2d] font-bold text-[15px] hover:bg-neutral-100 transition-all shadow-md hover:scale-105 cursor-pointer"

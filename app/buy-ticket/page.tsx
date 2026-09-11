@@ -16,67 +16,6 @@ const SPEAKER_SOHAIL_PHOTO = '/images/sohail_ali.png';
 
 const slides = [
   {
-    id: 0,
-    title: 'Summer Business BBQ',
-    eventTitle: 'Wednesday 9th September 2026 - The Farmhouse Coventry',
-    price: '£40.00',
-    eventSlug: 'summer-business-bbq',
-    bg: '/images/business_bbq_event_slider_image.png',
-    pill: 'Informal | Educational | Connection',
-    cards: [
-      {
-        type: 'date',
-        icon: <Calendar className="w-6 h-6 sm:w-7 sm:h-7 opacity-50" />,
-        color: 'bg-gradient-to-br from-[#9c5812] to-[#7a420b]',
-        content: (
-          <div>
-            <div className="text-2xl sm:text-[28px] font-bold leading-none mb-1">9th</div>
-            <div className="text-xs sm:text-[13px] font-medium leading-snug">September, Wednesday</div>
-            <div className="text-[11px] sm:text-xs text-white/80 mt-0.5">6:30pm – 9:30pm</div>
-          </div>
-        )
-      },
-      {
-        type: 'location',
-        icon: <MapPin className="w-6 h-6 sm:w-7 sm:h-7 opacity-50" />,
-        color: 'bg-gradient-to-br from-[#A6221D] to-[#79120E]',
-        content: (
-          <div className="text-sm sm:text-[15px] font-bold leading-snug">
-            The Farmhouse,<br />Coventry
-          </div>
-        )
-      },
-      {
-        type: 'ticket',
-        icon: <Ticket className="w-6 h-6 sm:w-7 sm:h-7 opacity-50 transform -rotate-45" />,
-        color: 'bg-gradient-to-br from-[#9c5812] to-[#7a420b]',
-        content: (
-          <div>
-            <div className="text-[11px] sm:text-xs text-white/80 mb-0.5">Ticket Price</div>
-            <div className="text-xl sm:text-[22px] font-bold leading-none">£40.00</div>
-          </div>
-        )
-      },
-      {
-        type: 'host',
-        icon: <Mic className="w-5 h-5 sm:w-6 sm:h-6 opacity-50" />,
-        color: 'bg-black/40 backdrop-blur-xl border border-white/5',
-        content: (
-          <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-[#FF6600] shrink-0">
-              <Image src={HOST_ABID_PHOTO} alt="Abid Khan" fill
-                sizes="64px" className="object-cover" />
-            </div>
-            <div>
-              <div className="text-[10px] sm:text-[11px] text-white/70">Hosted by</div>
-              <div className="text-sm sm:text-[15px] font-bold">Abid Khan</div>
-            </div>
-          </div>
-        )
-      }
-    ]
-  },
-  {
     id: 1,
     title: 'Business Networking Evening',
     eventTitle: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
@@ -202,18 +141,22 @@ export default function BuyTicketPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center px-4 sm:px-10 lg:px-20 max-w-[1600px] mx-auto w-full pt-16">
           
           {/* Navigation Arrows */}
-          <button 
-            onClick={prevSlide}
-            className="absolute left-1 sm:left-10 top-[190px] sm:top-1/2 sm:-translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/50 hover:text-white hover:scale-110 transition-all z-20"
-          >
-            <ChevronLeft className="w-10 h-10" />
-          </button>
-          <button 
-            onClick={nextSlide}
-            className="absolute right-1 sm:right-10 top-[190px] sm:top-1/2 sm:-translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/50 hover:text-white hover:scale-110 transition-all z-20"
-          >
-            <ChevronRight className="w-10 h-10" />
-          </button>
+          {slides.length > 1 && (
+            <>
+              <button 
+                onClick={prevSlide}
+                className="absolute left-1 sm:left-10 top-[190px] sm:top-1/2 sm:-translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/50 hover:text-white hover:scale-110 transition-all z-20"
+              >
+                <ChevronLeft className="w-10 h-10" />
+              </button>
+              <button 
+                onClick={nextSlide}
+                className="absolute right-1 sm:right-10 top-[190px] sm:top-1/2 sm:-translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/50 hover:text-white hover:scale-110 transition-all z-20"
+              >
+                <ChevronRight className="w-10 h-10" />
+              </button>
+            </>
+          )}
 
           {/* Text Header */}
           <AnimatePresence mode="wait">
@@ -276,18 +219,18 @@ export default function BuyTicketPage() {
           </AnimatePresence>
 
           {/* Pagination Dots */}
-          {/* Flows below the stacked cards on mobile; pinned to the bottom of
-              the fixed-height frame from sm: up. */}
-          <div className="mt-10 flex justify-center gap-3 z-20 sm:mt-0 sm:absolute sm:bottom-8 sm:left-0 sm:right-0">
-            {slides.map((s, i) => (
-              <button
-                key={s.id}
-                onClick={() => setCurrent(i)}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === current ? 'bg-white w-8' : 'bg-white/30 hover:bg-white/50'}`}
-                aria-label={`Go to slide ${i + 1}`}
-              />
-            ))}
-          </div>
+          {slides.length > 1 && (
+            <div className="mt-10 flex justify-center gap-3 z-20 sm:mt-0 sm:absolute sm:bottom-8 sm:left-0 sm:right-0">
+              {slides.map((s, i) => (
+                <button
+                  key={s.id}
+                  onClick={() => setCurrent(i)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === current ? 'bg-white w-8' : 'bg-white/30 hover:bg-white/50'}`}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

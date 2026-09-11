@@ -7,7 +7,6 @@ import { Calendar, Clock, MapPin, Check } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { useTicketModal } from './TicketModal';
 
-const EVENTS_PIC_1 = '/images/events_pic_1.png';
 const RECTANGLE_1889 = '/images/rectangle_1889.png';
 
 export function UpcomingEventsSection() {
@@ -38,74 +37,8 @@ export function UpcomingEventsSection() {
           </p>
         </div>
 
-        {/* 2-Card Grid Layout matching input_file_0.png */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 items-stretch">
-          
-          {/* Card 1: Summer Business BBQ */}
-          <div className="bg-[#FFF9F5] rounded-[24px] sm:rounded-[28px] p-4 xs:p-5 sm:p-6 border border-[#FDEEE3] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
-            <div>
-              {/* Clickable Event Poster Image */}
-              <Link href="/events/summer-business-bbq" className="block relative w-full aspect-[418/532] rounded-[16px] sm:rounded-[20px] overflow-hidden mb-4 sm:mb-5 shadow-sm group-hover:opacity-95 transition-opacity">
-                <Image
-                  src={EVENTS_PIC_1}
-                  alt="Summer Business BBQ"
-                  fill
-                sizes="100vw"
-                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                  priority
-                />
-              </Link>
-
-              {/* Clickable Event Title */}
-              <Link href="/events/summer-business-bbq" className="block">
-                <h3 className="text-lg xs:text-xl sm:text-2xl font-bold text-[#1f1f1f] text-left mb-2 sm:mb-2.5 group-hover:text-[#FF6600] transition-colors">
-                  Summer Business BBQ
-                </h3>
-              </Link>
-
-              {/* Meta details row */}
-              <div className="flex flex-wrap items-center gap-x-3.5 sm:gap-x-4 gap-y-2 text-[11px] xs:text-xs sm:text-[13px] text-[#666666] mb-4 sm:mb-5 text-left font-medium">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#888888] shrink-0" />
-                  <span>9th September</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#888888] shrink-0" />
-                  <span>6:30 pm - 9:30 pm</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#888888] shrink-0" />
-                  <span>The Farmhouse, Coventry</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions: Buy Now & Add to Calendar */}
-            <div className="flex flex-row items-center gap-2.5 sm:gap-3 w-full pt-1">
-              <button
-                type="button"
-                onClick={() =>
-                  openModal({
-                    title: 'Wednesday 9th September 2026 - The Farmhouse Coventry',
-                    price: '£40.00',
-                    eventSlug: 'summer-business-bbq',
-                  })
-                }
-                className="flex-1 inline-flex items-center justify-center h-[42px] sm:h-[46px] rounded-[10px] sm:rounded-[12px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-xs xs:text-sm sm:text-[15px] transition-all shadow-[0_4px_14px_rgba(255,102,0,0.25)] hover:scale-[1.02] whitespace-nowrap cursor-pointer"
-              >
-                Buy Now
-              </button>
-              <AddToCalendarButton
-                title="Summer Business BBQ - Chutney & Chat"
-                description="Join us for the Chutney & Chat Summer Business BBQ! Meet new business owners, expand your network, and enjoy an evening of inspiring networking and delicious food at The Farmhouse, Coventry."
-                location="The Farmhouse, 215 Beechwood Avenue, Coventry CV5 6HB, United Kingdom"
-                startDate="2026-09-09T18:30:00"
-                endDate="2026-09-09T21:30:00"
-              />
-            </div>
-          </div>
-
-          {/* Card 2: Business Networking Evening */}
+        {/* Upcoming Event Card: Business Networking Evening */}
+        <div className="max-w-[480px] mx-auto w-full">
           <div className="bg-[#FFF9F5] rounded-[24px] sm:rounded-[28px] p-4 xs:p-5 sm:p-6 border border-[#FDEEE3] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative group">
             <div>
               {/* Clickable Event Poster Image */}
@@ -114,7 +47,7 @@ export function UpcomingEventsSection() {
                   src={RECTANGLE_1889}
                   alt="Business Networking Evening"
                   fill
-                sizes="100vw"
+                  sizes="(max-width: 768px) 100vw, 480px"
                   className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   priority
                 />
@@ -173,7 +106,6 @@ export function UpcomingEventsSection() {
               />
             </div>
           </div>
-
         </div>
       </div>
     </section>
