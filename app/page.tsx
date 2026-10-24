@@ -97,7 +97,7 @@ export default function HomePage() {
                   onClick={() =>
                     openModal({
                       title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                      price: '£35.00',
+                      price: 'TBC',
                       eventSlug: 'annual-dinner-awards',
                     })
                   }

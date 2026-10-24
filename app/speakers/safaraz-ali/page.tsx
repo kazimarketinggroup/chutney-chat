@@ -26,7 +26,7 @@ export default function SafarazAliPage() {
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src={SAFARAZ_ALI_HERO_BG}
-            alt="Safaraz Ali - Chutney &amp; Chat"
+            alt="Safaraz Ali MBE - Chutney &amp; Chat"
             fill
                 sizes="100vw"
             className="object-cover object-center brightness-95 contrast-[1.05]"
@@ -40,7 +40,7 @@ export default function SafarazAliPage() {
         {/* Hero Bottom-Left Header Content */}
         <div className="relative z-20 max-w-[1170px] mx-auto px-6 w-full text-left space-y-2 text-white">
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
-            Safaraz Ali
+            Safaraz Ali MBE
           </h1>
           <p className="text-xl sm:text-2xl font-light text-white/90 tracking-wide">
             Chutney &amp; Chat Co-Founder

@@ -93,7 +93,7 @@ values
     'Quaid-E-Azam, Birmingham / TBC',
     '2026-12-09T18:30:00Z',
     '2026-12-09T21:30:00Z',
-    3500,
+    0, -- TBC (client pricing not set yet)
     '/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png'
   ),
   (

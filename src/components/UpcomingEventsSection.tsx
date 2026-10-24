@@ -58,7 +58,7 @@ const EVENTS: EventItem[] = [
     timeDisplay: '6:30 pm - 9:30 pm',
     venueDisplay: 'Quaid-E-Azam, Birmingham / TBC',
     image: '/images/annual_dinner_poster_uniform.png',
-    price: '£35.00',
+    price: 'TBC',
     isSoldOut: false,
     calendarData: {
       title: 'Annual Dinner & Awards - Chutney & Chat',
