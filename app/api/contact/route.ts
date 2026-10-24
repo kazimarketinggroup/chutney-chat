@@ -93,8 +93,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, message: 'Email sent successfully' }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('API Email Error:', error);
-    return NextResponse.json({ success: false, message: 'Failed to send email' }, { status: 500 });
+    return NextResponse.json({ success: false, message: error?.message || 'Failed to send email' }, { status: 500 });
   }
 }
