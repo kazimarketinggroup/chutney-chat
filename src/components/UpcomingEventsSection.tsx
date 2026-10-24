@@ -17,6 +17,7 @@ interface EventItem {
   image: string;
   price: string;
   isSoldOut: boolean;
+  aspectClass?: string;
   calendarData?: {
     title: string;
     description: string;
@@ -37,6 +38,7 @@ const EVENTS: EventItem[] = [
     image: '/images/a9ad7b22ed3d4d370a0f00944e7eb34f1ceeca4c.png',
     price: '£40.00',
     isSoldOut: true,
+    aspectClass: 'aspect-[4/5]',
   },
   {
     id: 'bne',
@@ -48,6 +50,7 @@ const EVENTS: EventItem[] = [
     image: '/images/e9179f966d2c35cdda4b95a0de7b932885d891f8.png',
     price: '£35.00',
     isSoldOut: true,
+    aspectClass: 'aspect-[4/5]',
   },
   {
     id: 'awards',
@@ -59,6 +62,7 @@ const EVENTS: EventItem[] = [
     image: '/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png',
     price: '£35.00',
     isSoldOut: false,
+    aspectClass: 'aspect-[2/3]',
     calendarData: {
       title: 'Annual Dinner & Awards - Chutney & Chat',
       description: 'Celebrating 11 Years of Award Winning Business Network! Hosted by Abid Khan at Chutney & Chat Annual Dinner & Awards.',
@@ -110,7 +114,7 @@ export function UpcomingEventsSection() {
                 {/* Clickable Event Poster Image with Sold Out Stamp */}
                 <Link
                   href={`/events/${evt.slug}`}
-                  className="block relative w-full aspect-[418/500] rounded-[18px] sm:rounded-[22px] overflow-hidden mb-4 sm:mb-5 shadow-sm group-hover:opacity-95 transition-opacity bg-neutral-900"
+                  className={`block relative w-full ${evt.aspectClass || 'aspect-[4/5]'} rounded-[18px] sm:rounded-[22px] overflow-hidden mb-4 sm:mb-5 shadow-sm group-hover:opacity-95 transition-opacity bg-neutral-900`}
                 >
                   <Image
                     src={evt.image}
