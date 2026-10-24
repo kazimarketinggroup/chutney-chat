@@ -301,6 +301,13 @@ export function TicketModal() {
       session
         ? {
             clientSecret: session.clientSecret,
+            defaultValues: {
+              billingDetails: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone || undefined,
+              },
+            },
             appearance: {
               theme: 'flat' as const,
               variables: {
@@ -1003,6 +1010,7 @@ export function TicketModal() {
                       quantity={formData.quantity}
                       buyerName={formData.name}
                       buyerEmail={formData.email}
+                      buyerPhone={formData.phone}
                       onPaid={handlePaid}
                       onBack={() => {
                         setError(null);
@@ -1258,6 +1266,7 @@ function PaymentStep({
   quantity,
   buyerName,
   buyerEmail,
+  buyerPhone,
   onPaid,
   onBack,
   submitting,
@@ -1268,6 +1277,7 @@ function PaymentStep({
   quantity: number;
   buyerName: string;
   buyerEmail: string;
+  buyerPhone?: string;
   onPaid: (intentId: string | null, fallback: string) => void;
   onBack: () => void;
   submitting: boolean;
@@ -1292,6 +1302,13 @@ function PaymentStep({
       redirect: 'if_required',
       confirmParams: {
         return_url: `${window.location.origin}/buy-ticket/success`,
+        payment_method_data: {
+          billing_details: {
+            name: buyerName,
+            email: buyerEmail,
+            phone: buyerPhone || undefined,
+          },
+        },
       },
     });
 

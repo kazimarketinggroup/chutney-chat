@@ -188,9 +188,37 @@ export async function POST(req: Request) {
 
     // ---- PaymentIntent for the in-page card form ----
     const stripe = getStripe();
+
+    // Attach or create Stripe Customer so Name and Phone populate top-level Customer profile in Stripe Dashboard
+    let customerId: string | undefined;
+    try {
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      if (existing.data.length > 0) {
+        customerId = existing.data[0].id;
+        await stripe.customers.update(customerId, {
+          name,
+          phone: phone || undefined,
+        });
+      } else {
+        const createdCustomer = await stripe.customers.create({
+          name,
+          email,
+          phone: phone || undefined,
+          metadata: {
+            company: company || '',
+            role: role || '',
+          },
+        });
+        customerId = createdCustomer.id;
+      }
+    } catch (custErr) {
+      console.warn('[checkout] customer attach warning:', custErr);
+    }
+
     const intent = await stripe.paymentIntents.create({
       amount: amountPence,
       currency: event.currency,
+      customer: customerId,
       receipt_email: email,
       description: `${event.title} — ${quantity} ticket${quantity === 1 ? '' : 's'}`,
       automatic_payment_methods: { enabled: true },
@@ -200,6 +228,7 @@ export async function POST(req: Request) {
         event_slug: event.slug,
         attendee_name: name,
         attendee_email: email,
+        attendee_phone: phone || '',
         quantity: String(quantity),
         guest_details: JSON.stringify(guestDetails),
       },
