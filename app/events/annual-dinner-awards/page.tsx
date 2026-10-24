@@ -137,14 +137,14 @@ export default function AnnualDinnerAwardsPage() {
             {/* LEFT CARD: Event Flyer & Quick Action Buttons */}
             <div className="bg-[#FFF9F5] rounded-[24px] sm:rounded-[28px] p-6 sm:p-8 border border-[#FDEEE3] shadow-sm flex flex-col justify-between space-y-6">
               
-              {/* Event Poster Image (aspect 2/3 matches 1024x1536 poster perfectly) */}
-              <div className="relative w-full aspect-[2/3] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
+              {/* Event Poster Image (uniform aspect 271/376 matching design) */}
+              <div className="relative w-full aspect-[271/376] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
                 <Image
-                  src="/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png"
+                  src="/images/annual_dinner_poster_uniform.png"
                   alt="Annual Dinner & Awards"
                   fill
                   sizes="(max-width: 768px) 100vw, 550px"
-                  className="object-cover object-top"
+                  className="object-cover object-center"
                   priority
                 />
               </div>

@@ -130,7 +130,7 @@ export default function SummerBusinessBBQPage() {
             <div className="bg-[#FFF9F5] rounded-[24px] p-6 sm:p-8 border border-[#FDEEE3] shadow-sm flex flex-col justify-between space-y-6">
               
               {/* Event Poster Image */}
-              <div className="relative w-full aspect-[4/5] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
+              <div className="relative w-full aspect-[271/376] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
                 <Image
                   src={EVENTS_PIC_1}
                   alt="Summer Business BBQ"

@@ -38,7 +38,6 @@ const EVENTS: EventItem[] = [
     image: '/images/a9ad7b22ed3d4d370a0f00944e7eb34f1ceeca4c.png',
     price: '£40.00',
     isSoldOut: true,
-    aspectClass: 'aspect-[4/5]',
   },
   {
     id: 'bne',
@@ -50,7 +49,6 @@ const EVENTS: EventItem[] = [
     image: '/images/e9179f966d2c35cdda4b95a0de7b932885d891f8.png',
     price: '£35.00',
     isSoldOut: true,
-    aspectClass: 'aspect-[4/5]',
   },
   {
     id: 'awards',
@@ -59,10 +57,9 @@ const EVENTS: EventItem[] = [
     dateDisplay: '9th December',
     timeDisplay: '6:30 pm - 9:30 pm',
     venueDisplay: 'Quaid-E-Azam, Birmingham / TBC',
-    image: '/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png',
+    image: '/images/annual_dinner_poster_uniform.png',
     price: '£35.00',
     isSoldOut: false,
-    aspectClass: 'aspect-[2/3]',
     calendarData: {
       title: 'Annual Dinner & Awards - Chutney & Chat',
       description: 'Celebrating 11 Years of Award Winning Business Network! Hosted by Abid Khan at Chutney & Chat Annual Dinner & Awards.',
@@ -103,7 +100,7 @@ export function UpcomingEventsSection() {
           </p>
         </div>
 
-        {/* 3-Card Responsive Grid */}
+        {/* 3-Card Responsive Grid with identical poster heights & aspect ratios */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 items-stretch">
           {EVENTS.map((evt) => (
             <div
@@ -111,17 +108,17 @@ export function UpcomingEventsSection() {
               className="bg-[#FFF9F5] rounded-[24px] sm:rounded-[28px] p-4 xs:p-5 sm:p-5.5 border border-[#FDEEE3] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative group"
             >
               <div>
-                {/* Clickable Event Poster Image with Sold Out Stamp */}
+                {/* Clickable Event Poster Image with Sold Out Stamp (uniform aspect-[271/376]) */}
                 <Link
                   href={`/events/${evt.slug}`}
-                  className={`block relative w-full ${evt.aspectClass || 'aspect-[4/5]'} rounded-[18px] sm:rounded-[22px] overflow-hidden mb-4 sm:mb-5 shadow-sm group-hover:opacity-95 transition-opacity bg-neutral-900`}
+                  className="block relative w-full aspect-[271/376] rounded-[18px] sm:rounded-[22px] overflow-hidden mb-4 sm:mb-5 shadow-sm group-hover:opacity-95 transition-opacity bg-neutral-900"
                 >
                   <Image
                     src={evt.image}
                     alt={evt.title}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 380px"
-                    className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
                     priority={!evt.isSoldOut}
                   />
 
