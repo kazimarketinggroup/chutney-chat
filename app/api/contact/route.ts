@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTransporter } from '@/lib/bookingEmail';
+import { sendEmail } from '@/lib/bookingEmail';
 
 const ADMIN_EMAIL = process.env.BOOKING_NOTIFY_EMAIL || 'abidspersonal55@gmail.com';
 const rawSender = process.env.EMAIL_FROM || 'tickets@chutneyandchat.co.uk';
@@ -11,12 +11,6 @@ export async function POST(req: Request) {
     const type = data.type || 'enquiry';
     const name = data.name || 'Not provided';
     const email = data.email || 'Not provided';
-    
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.error('[contact] Email transporter not configured');
-      return NextResponse.json({ success: false, message: 'Email service not configured' }, { status: 500 });
-    }
 
     let subject = '';
     let htmlContent = '';
@@ -90,7 +84,7 @@ export async function POST(req: Request) {
     }
 
     // Send Mail
-    await transporter.sendMail({
+    await sendEmail({
       from: `"Chutney & Chat Forms" <${SENDER_EMAIL}>`,
       to: ADMIN_EMAIL,
       replyTo: email,

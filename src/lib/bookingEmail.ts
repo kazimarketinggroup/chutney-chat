@@ -55,6 +55,66 @@ export function getTransporter() {
   return nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
 }
 
+export interface SendEmailOptions {
+  from?: string;
+  to: string | string[];
+  replyTo?: string;
+  subject: string;
+  html: string;
+  text?: string;
+  headers?: Record<string, string>;
+}
+
+export async function sendEmail(opts: SendEmailOptions) {
+  const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_PASS || '').trim();
+  const from = opts.from || `"Chutney & Chat" <${SENDER_EMAIL}>`;
+
+  // Resend HTTPS API (fastest, serverless safe, no SMTP port blockage)
+  if (apiKey.startsWith('re_')) {
+    const to = Array.isArray(opts.to) ? opts.to : [opts.to];
+    const payload: Record<string, any> = {
+      from,
+      to,
+      subject: opts.subject,
+      html: opts.html,
+    };
+    if (opts.text) payload.text = opts.text;
+    if (opts.replyTo) payload.reply_to = opts.replyTo;
+    if (opts.headers) payload.headers = opts.headers;
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Resend API error (${res.status}): ${errText}`);
+    }
+    return await res.json();
+  }
+
+  // Fallback to Nodemailer transporter
+  const transporter = getTransporter();
+  if (!transporter) {
+    throw new Error('No email transporter or API key configured');
+  }
+
+  return await transporter.sendMail({
+    from,
+    to: opts.to,
+    replyTo: opts.replyTo,
+    subject: opts.subject,
+    html: opts.html,
+    text: opts.text,
+    headers: opts.headers,
+  });
+}
+
 /** "Wednesday 9 September 2026" */
 function formatEventDay(event: EventRow | null): string {
   if (!event?.starts_at) return '';
@@ -139,9 +199,10 @@ function calendarUrl(event: EventRow | null, ticket: string): string | null {
 }
 
 export async function sendBookingEmails(booking: BookingRow, event: EventRow | null) {
-  const transporter = getTransporter();
-  if (!transporter) {
-    console.warn('[bookingEmail] EMAIL_USER/EMAIL_PASS not set — skipping emails.');
+  const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_PASS || '').trim();
+  const hasConfig = apiKey || process.env.EMAIL_USER;
+  if (!hasConfig) {
+    console.warn('[bookingEmail] Email credentials not set — skipping emails.');
     return;
   }
 
@@ -179,7 +240,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
   });
 
   mailPromises.push(
-    transporter.sendMail({
+    sendEmail({
       from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
       to: booking.email,
       subject: `Your ticket ${ticket} — ${eventTitle}`,
@@ -239,7 +300,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
         });
 
         mailPromises.push(
-          transporter.sendMail({
+          sendEmail({
             from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
             to: guestEmail,
             subject: `🎟️ Your E-Ticket ${guestTicketRef} — ${eventTitle}`,
@@ -267,7 +328,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
   // Admin Notification Email
   const adminHtml = buildAdminEmail({ booking, eventTitle, venue, day, ticket, total });
   mailPromises.push(
-    transporter.sendMail({
+    sendEmail({
       from: `"Chutney & Chat Bookings" <${SENDER_EMAIL}>`,
       to: ADMIN_EMAIL,
       replyTo: booking.email,
