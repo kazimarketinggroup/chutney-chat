@@ -33,6 +33,7 @@ create table if not exists public.bookings (
   email                      text not null,
   phone                      text,
   company                    text,
+  role                       text,
   quantity                   integer not null default 1 check (quantity > 0),
   guest_details              jsonb,
 
@@ -82,9 +83,19 @@ create policy "public can read active events"
 -- touches this table, and service-role bypasses RLS. This means a leaked
 -- anon key can never read customer names, emails or payment records.
 
--- ---------- SEED THE TWO CURRENT EVENTS ----------
+-- ---------- SEED CURRENT EVENTS ----------
 insert into public.events (slug, title, subtitle, venue, starts_at, ends_at, price_pence, image_url)
 values
+  (
+    'annual-dinner-awards',
+    'Annual Dinner & Awards',
+    'Wednesday 9th December 2026 - Quaid-E-Azam Birmingham / TBC',
+    'Quaid-E-Azam, Birmingham / TBC',
+    '2026-12-09T18:30:00Z',
+    '2026-12-09T21:30:00Z',
+    3500,
+    '/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png'
+  ),
   (
     'summer-business-bbq',
     'Summer Business BBQ',
@@ -93,7 +104,7 @@ values
     '2026-09-09T18:30:00+01:00',
     '2026-09-09T21:30:00+01:00',
     4000,
-    '/images/business_bbq_event_slider_image.png'
+    '/images/a9ad7b22ed3d4d370a0f00944e7eb34f1ceeca4c.png'
   ),
   (
     'business-networking-evening',
@@ -103,7 +114,7 @@ values
     '2026-09-29T18:30:00+01:00',
     '2026-09-29T22:30:00+01:00',
     3500,
-    '/images/business_networking_event_slider_image.png'
+    '/images/e9179f966d2c35cdda4b95a0de7b932885d891f8.png'
   )
 on conflict (slug) do update set
   title       = excluded.title,

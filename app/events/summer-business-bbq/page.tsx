@@ -130,15 +130,27 @@ export default function SummerBusinessBBQPage() {
             <div className="bg-[#FFF9F5] rounded-[24px] p-6 sm:p-8 border border-[#FDEEE3] shadow-sm flex flex-col justify-between space-y-6">
               
               {/* Event Poster Image */}
-              <div className="relative w-full aspect-[418/532] rounded-[18px] overflow-hidden shadow-sm">
+              <div className="relative w-full aspect-[418/532] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
                 <Image
                   src={EVENTS_PIC_1}
                   alt="Summer Business BBQ"
                   fill
-                sizes="100vw"
+                  sizes="100vw"
                   className="object-cover object-top"
                   priority
                 />
+                {/* Sold Out Stamp Overlay */}
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                  <div className="relative w-48 sm:w-56 aspect-[332/276] transform -rotate-12 drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]">
+                    <Image
+                      src="/images/7b286d6c49c2260ff71f513265849b7a36c05f72.png"
+                      alt="Sold Out"
+                      fill
+                      sizes="240px"
+                      className="object-contain"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Title & Metadata */}
@@ -166,13 +178,13 @@ export default function SummerBusinessBBQPage() {
               {/* Buttons Row */}
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                 <Link
-                  href="/events/business-networking-evening"
+                  href="/events/annual-dinner-awards"
                   className="w-full sm:flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm transition-all shadow-sm text-center"
                 >
-                  View Next Event: 29th Sept
+                  View Next Event: 9th Dec
                 </Link>
                 <div className="text-xs text-[#888888] font-medium text-center sm:text-left">
-                  This event has concluded.
+                  This event is Sold Out.
                 </div>
               </div>
 

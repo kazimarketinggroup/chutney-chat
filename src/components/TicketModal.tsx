@@ -58,8 +58,8 @@ interface TicketModalContextType {
 }
 
 const defaultEventDetails: TicketEventDetails = {
-  eventSlug: 'business-networking-evening',
-  title: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
+  eventSlug: 'annual-dinner-awards',
+  title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
   price: '£35.00',
 };
 
@@ -196,10 +196,15 @@ export function TicketModal() {
   };
 
   // Safe pricing calculation for real-time order summary display
+  const isTBC = useMemo(() => {
+    return eventDetails.price.toUpperCase().includes('TBC');
+  }, [eventDetails.price]);
+
   const unitPrice = useMemo(() => {
+    if (isTBC) return 0;
     const match = eventDetails.price.match(/[\d.]+/);
     return match ? parseFloat(match[0]) : 35.0;
-  }, [eventDetails.price]);
+  }, [eventDetails.price, isTBC]);
 
   const currencySymbol = useMemo(() => {
     const match = eventDetails.price.match(/^[^\d]+/);
@@ -207,8 +212,9 @@ export function TicketModal() {
   }, [eventDetails.price]);
 
   const calculatedSubtotal = useMemo(() => {
+    if (isTBC) return 'TBC';
     return (unitPrice * formData.quantity).toFixed(2);
-  }, [unitPrice, formData.quantity]);
+  }, [unitPrice, formData.quantity, isTBC]);
 
   // Parse title into date and venue if separated by hyphen for premium badges
   const parsedEvent = useMemo(() => {
@@ -259,11 +265,17 @@ export function TicketModal() {
         throw new Error('Unable to start checkout right now. Please try again.');
       }
 
-      if (!res.ok || !json?.clientSecret) {
+      if (!res.ok) {
         throw new Error(json?.error || 'Could not start checkout. Please try again.');
       }
 
       setSession(json);
+
+      if (json?.isFree || !json?.clientSecret) {
+        handlePaid(null, json?.ticketNumber || `CC-2612-${Math.floor(1000 + Math.random() * 9000)}`);
+        return;
+      }
+
       setStep('payment');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -915,7 +927,7 @@ export function TicketModal() {
                               </div>
                               <div className="text-right">
                                 <span className="text-xl sm:text-2xl font-extrabold text-[#FF6600] tracking-tight">
-                                  {currencySymbol}{calculatedSubtotal}
+                                  {isTBC ? 'TBC' : `${currencySymbol}${calculatedSubtotal}`}
                                 </span>
                               </div>
                             </div>
@@ -935,7 +947,7 @@ export function TicketModal() {
                                 </>
                               ) : (
                                 <>
-                                  <span>Continue to payment</span>
+                                  <span>{isTBC ? 'Pay £TBC (Reserve Place)' : 'Continue to payment'}</span>
                                   <ArrowRight className="w-4 h-4" />
                                 </>
                               )}
@@ -1121,7 +1133,7 @@ function SuccessStep({
             year: 'numeric',
             timeZone: 'Europe/London',
           }).format(new Date(details.startsAt))
-        : (details?.title?.includes('Coventry') ? 'Wednesday 9th September 2026' : 'Tuesday 29th September 2026');
+        : (details?.title?.includes('Coventry') ? 'Wednesday 9th September 2026' : 'Wednesday 9th December 2026');
 
       const timeText = details?.title?.includes('Coventry') ? '6:30pm – 9:30pm' : '6:30pm – 10:30pm';
 

@@ -17,12 +17,12 @@ const SPEAKER_SOHAIL_PHOTO = '/images/sohail_ali.png';
 const slides = [
   {
     id: 1,
-    title: 'Business Networking Evening',
-    eventTitle: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
+    title: 'Annual Dinner & Awards',
+    eventTitle: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
     price: '£35.00',
-    eventSlug: 'business-networking-evening',
-    bg: '/images/business_networking_event_slider_image.png',
-    pill: 'Informal | Educational | Connection',
+    eventSlug: 'annual-dinner-awards',
+    bg: '/images/buy_ticket_hero_bg.png',
+    pill: '11 Years of Award Winning Business Network',
     cards: [
       {
         type: 'date',
@@ -30,9 +30,9 @@ const slides = [
         color: 'bg-gradient-to-br from-[#9c5812] to-[#7a420b]',
         content: (
           <div>
-            <div className="text-2xl sm:text-[28px] font-bold leading-none mb-1">29th</div>
-            <div className="text-xs sm:text-[13px] font-medium leading-snug">September, Tuesday</div>
-            <div className="text-[11px] sm:text-xs text-white/80 mt-0.5">6:30pm – 10:30pm</div>
+            <div className="text-2xl sm:text-[28px] font-bold leading-none mb-1">9th</div>
+            <div className="text-xs sm:text-[13px] font-medium leading-snug">December, Wednesday</div>
+            <div className="text-[11px] sm:text-xs text-white/80 mt-0.5">6:30pm – 9:30pm</div>
           </div>
         )
       },
@@ -42,8 +42,8 @@ const slides = [
         color: 'bg-gradient-to-br from-[#A6221D] to-[#79120E]',
         content: (
           <div className="text-xs sm:text-[13px] font-bold leading-snug">
-            Tipu Sultan<br />
-            <span className="font-normal opacity-90">18 The Parade, Oadby,<br />Leicester LE2 5BF</span>
+            Location TBC<br />
+            <span className="font-normal opacity-90">Quaid-E-Azam, Birmingham / TBC</span>
           </div>
         )
       },
@@ -71,23 +71,6 @@ const slides = [
             <div>
               <div className="text-[10px] sm:text-[11px] text-white/70">Hosted by</div>
               <div className="text-sm sm:text-[14px] font-bold">Abid Khan</div>
-            </div>
-          </div>
-        )
-      },
-      {
-        type: 'speaker',
-        icon: <Mic className="w-5 h-5 sm:w-6 sm:h-6 opacity-50" />,
-        color: 'bg-black/40 backdrop-blur-xl border border-white/5',
-        content: (
-          <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-white/20 shrink-0">
-              <Image src={SPEAKER_SOHAIL_PHOTO} alt="Sohail Ali" fill
-                sizes="64px" className="object-cover" />
-            </div>
-            <div>
-              <div className="text-[10px] sm:text-[11px] text-white/70 whitespace-nowrap">Keynote Speaker</div>
-              <div className="text-sm sm:text-[14px] font-bold">Sohail Ali</div>
             </div>
           </div>
         )

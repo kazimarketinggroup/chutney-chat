@@ -71,7 +71,7 @@ export default function AboutPage() {
             <div className="lg:col-span-7 space-y-6">
               <div>
                 <span className="inline-block px-5 py-2 rounded-full bg-[#834217]/75 border border-white/25 text-white font-light text-sm sm:text-base backdrop-blur-md shadow-md">
-                  Informal | Educational | Connection
+                  Network | Learn | Grow
                 </span>
               </div>
 
@@ -80,13 +80,13 @@ export default function AboutPage() {
               </h1>
 
               <div className="space-y-1 text-white/90 text-base sm:text-lg font-light">
-                <p>Next Event: Tuesday 29th September 2026</p>
-                <p>at Tipu Sultan Leicester</p>
-                <p>6:30pm - 10:30pm</p>
+                <p>Next Event : Wednesday, 9th December 2026</p>
+                <p>at TBC</p>
+                <p>6:30pm - 9:30pm</p>
               </div>
 
               {/* Live Countdown Timer */}
-              <EventCountdown targetDate="2026-09-29T18:30:00" />
+              <EventCountdown targetDate="2026-12-09T18:30:00Z" />
 
               <div className="pt-2">
                 <Link

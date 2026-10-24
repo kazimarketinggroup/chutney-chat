@@ -6,15 +6,14 @@ interface EventCountdownProps {
   targetDate?: string;
 }
 
-// Default target: Tuesday 29th September 2026 at 6:30pm UK Time (BST: UTC+1)
-const DEFAULT_UK_TARGET = '2026-09-29T18:30:00+01:00';
+// Default target: Wednesday 9th December 2026 at 6:30pm UK Time (GMT: UTC+0)
+const DEFAULT_UK_TARGET = '2026-12-09T18:30:00Z';
 
 function getTimeRemaining(targetDateStr: string) {
   try {
-    // If simple date string without timezone offset is passed, default to UK BST (+01:00)
     let dateInput = targetDateStr || DEFAULT_UK_TARGET;
     if (dateInput.endsWith(':00') && !dateInput.includes('+') && !dateInput.includes('Z')) {
-      dateInput += '+01:00';
+      dateInput += 'Z';
     }
 
     const target = new Date(dateInput).getTime();

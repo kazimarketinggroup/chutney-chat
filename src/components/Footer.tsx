@@ -142,15 +142,15 @@ export const Footer = () => {
             <div className="space-y-4 text-white/70 text-base">
               <p>
                 <strong className="text-white font-medium block">Next Gathering:</strong>
-                Tuesday 29th September 2026 (6:30pm – 10:30pm)
+                Wednesday 9th December 2026 (6:30pm – 9:30pm)
               </p>
               <p>
                 <strong className="text-white font-medium block">Location:</strong>
-                Tipu Sultan, Leicester
+                Quaid-E-Azam, Birmingham / TBC
               </p>
               <p>
                 <strong className="text-white font-medium block">Ticket Price:</strong>
-                £35.00 (Includes 3-Course Balti Meal)
+                £35.00 (Includes 3-Course Balti Meal &amp; Awards)
               </p>
             </div>
           </div>

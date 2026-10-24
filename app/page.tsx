@@ -27,7 +27,7 @@ const P2G_LOGO = '/images/p2g_logo.png';
 const HIGHFIELD_LOGO = '/images/highfield_logo.png';
 
 // Founder Photos
-const SAFARAZ_ALI_PHOTO = '/images/sarfazali.png';
+const SAFARAZ_ALI_PHOTO = '/images/53a86d00bcdb8701bf5bcc183282309f731ef748.png';
 const ABID_KHAN_PHOTO = figmaImages['4cb96fcaa9271871b093df6c3635457faaebe957'] || '/images/4cb96fcaa9271871b093df6c3635457faaebe957.png';
 
 // Bento Photos
@@ -74,7 +74,7 @@ export default function HomePage() {
             <div className="lg:col-span-7 space-y-6">
               <div>
                 <span className="inline-block px-5 py-2 rounded-full bg-[#834217]/75 border border-white/25 text-white font-light text-sm sm:text-base backdrop-blur-md shadow-md">
-                  Informal | Educational | Connection
+                  Network | Learn | Grow
                 </span>
               </div>
 
@@ -83,22 +83,22 @@ export default function HomePage() {
               </h1>
 
               <div className="space-y-1 text-white/90 text-base sm:text-lg font-light">
-                <p>Next Event: Tuesday 29th September 2026</p>
-                <p>at Tipu Sultan Leicester</p>
-                <p>6:30pm - 10:30pm</p>
+                <p>Next Event : Wednesday, 9th December 2026</p>
+                <p>at TBC</p>
+                <p>6:30pm - 9:30pm</p>
               </div>
 
               {/* Live Countdown Timer */}
-              <EventCountdown targetDate="2026-09-29T18:30:00" />
+              <EventCountdown targetDate="2026-12-09T18:30:00Z" />
 
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() =>
                     openModal({
-                      title: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
+                      title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
                       price: '£35.00',
-                      eventSlug: 'business-networking-evening',
+                      eventSlug: 'annual-dinner-awards',
                     })
                   }
                   className="inline-flex items-center justify-center h-[44px] px-8 rounded-md bg-white text-[#2d2d2d] font-bold text-[15px] hover:bg-neutral-100 transition-all shadow-md hover:scale-105 cursor-pointer"
@@ -492,12 +492,12 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Founder 2 (Mobile under): Safaraz Ali */}
+              {/* Founder 2 (Mobile under): Safaraz Ali MBE */}
               <div className="space-y-4 max-w-[360px] mx-auto text-left">
                 <Link href="/speakers/safaraz-ali" className="relative block h-[380px] sm:h-[440px] rounded-[24px] overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.12)] group">
                   <Image
                     src={SAFARAZ_ALI_PHOTO}
-                    alt="Safaraz Ali"
+                    alt="Safaraz Ali MBE"
                     fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
                     className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
@@ -507,7 +507,7 @@ export default function HomePage() {
                 <div className="pt-2">
                   <div className="border-b-[1.5px] border-[#2d2d2d] pb-1.5 mb-2 inline-block">
                     <h3 className="text-xl font-bold text-[#2d2d2d] leading-none">
-                      Safaraz Ali
+                      Safaraz Ali MBE
                     </h3>
                   </div>
                   <p className="text-xs font-normal text-[#666666]">
@@ -566,11 +566,11 @@ export default function HomePage() {
                     </Link>
                   </div>
 
-                  {/* Safaraz Ali - Right aligned block */}
+                  {/* Safaraz Ali MBE - Right aligned block */}
                   <div className="text-right flex flex-col items-end">
                     <div className="border-b-[1.5px] border-[#2d2d2d] pb-1.5 mb-2.5 inline-block">
                       <h3 className="text-base sm:text-[22px] font-bold text-[#2d2d2d] leading-none">
-                        Safaraz Ali
+                        Safaraz Ali MBE
                       </h3>
                     </div>
                     <p className="text-xs sm:text-[14px] font-normal text-[#666666]">

@@ -146,15 +146,27 @@ export default function BusinessNetworkingEveningPage() {
             <div className="bg-[#FFF9F5] rounded-[24px] p-6 sm:p-8 border border-[#FDEEE3] shadow-sm flex flex-col justify-between space-y-6">
               
               {/* Event Poster Image */}
-              <div className="relative w-full aspect-[418/532] rounded-[18px] overflow-hidden shadow-sm">
+              <div className="relative w-full aspect-[418/532] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
                 <Image
                   src={LEICESTER_POSTER}
                   alt="Business Networking Evening"
                   fill
-                sizes="100vw"
+                  sizes="100vw"
                   className="object-cover object-top"
                   priority
                 />
+                {/* Sold Out Stamp Overlay */}
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                  <div className="relative w-48 sm:w-56 aspect-[332/276] transform -rotate-12 drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]">
+                    <Image
+                      src="/images/7b286d6c49c2260ff71f513265849b7a36c05f72.png"
+                      alt="Sold Out"
+                      fill
+                      sizes="240px"
+                      className="object-contain"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Title & Metadata */}
@@ -174,7 +186,7 @@ export default function BusinessNetworkingEveningPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-[#888888] shrink-0" />
-                    <span>Tipu Sultan</span>
+                    <span>Tipu Sultan, Leicester</span>
                   </div>
                 </div>
               </div>
@@ -183,24 +195,11 @@ export default function BusinessNetworkingEveningPage() {
               <div className="flex flex-row items-center gap-4 pt-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    openModal({
-                      title: 'Tuesday 29th September 2026 - Tipu Sultan Leicester',
-                      price: '£35.00',
-                      eventSlug: 'business-networking-evening',
-                    })
-                  }
-                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm transition-all shadow-sm text-center cursor-pointer"
+                  disabled
+                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-sm text-center cursor-not-allowed"
                 >
-                  Buy Now
+                  Sold Out
                 </button>
-                <AddToCalendarButton
-                  title="Business Networking Evening - Chutney & Chat"
-                  description="Join us for the Chutney & Chat Business Networking Evening! Meet new entrepreneurs, expand your professional network, and enjoy a 3-course Balti meal at Tipu Sultan, Leicester. Keynote Speaker: Sohail Ali. Hosted by Abid Khan."
-                  location="Tipu Sultan, 18 The Parade, Oadby, Leicester LE2 5BF, United Kingdom"
-                  startDate="2026-09-29T18:30:00"
-                  endDate="2026-09-29T22:30:00"
-                />
               </div>
 
             </div>
@@ -229,7 +228,7 @@ export default function BusinessNetworkingEveningPage() {
                   <div className="space-y-3 pt-2 text-xs sm:text-sm text-[#666666] font-medium">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-[#888888] shrink-0" />
-                      <span>Tuesday 29th September 2026</span>
+                      <span>Wednesday 9th December 2026</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-[#888888] shrink-0" />

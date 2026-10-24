@@ -125,7 +125,63 @@ export async function POST(req: Request) {
       );
     }
 
-    const amountPence = event.price_pence * quantity;
+    const amountPence = (event.price_pence || 0) * quantity;
+
+    // ---- If event is free or TBC reservation, bypass Stripe PaymentIntent ----
+    if (amountPence === 0) {
+      let bookingId: string | null = null;
+      let ticketNumber: string | null = null;
+
+      const { data: booking } = await supabase
+        .from('bookings')
+        .insert({
+          event_id: event.id,
+          name,
+          email,
+          phone: phone || null,
+          company: company || null,
+          role: role || null,
+          quantity,
+          guest_details: guestDetails,
+          status: 'paid',
+          amount_pence: 0,
+          currency: event.currency,
+        })
+        .select('id, ticket_number')
+        .single();
+
+      if (booking?.id) {
+        bookingId = booking.id;
+        ticketNumber = booking.ticket_number;
+      } else {
+        const { data: fbBooking } = await supabase
+          .from('bookings')
+          .insert({
+            event_id: event.id,
+            name,
+            email,
+            phone: phone || null,
+            company: company || null,
+            quantity,
+            status: 'paid',
+            amount_pence: 0,
+            currency: event.currency,
+          })
+          .select('id, ticket_number')
+          .single();
+        bookingId = fbBooking?.id || null;
+        ticketNumber = fbBooking?.ticket_number || null;
+      }
+
+      return NextResponse.json({
+        clientSecret: null,
+        bookingId,
+        ticketNumber: ticketNumber || `CC-2612-${Math.floor(1000 + Math.random() * 9000)}`,
+        amountPence: 0,
+        currency: event.currency,
+        isFree: true,
+      });
+    }
 
     // ---- create the pending booking BEFORE taking payment ----
     let bookingId: string | null = null;
@@ -151,8 +207,7 @@ export async function POST(req: Request) {
     if (booking?.id) {
       bookingId = booking.id;
     } else {
-      console.warn('[checkout] insert with guest_details failed, retrying without guest_details:', bookingError);
-      // Fallback: insert without guest_details column if schema is not yet updated
+      // Fallback: insert with baseline columns if optional columns (guest_details / role) are not present
       const { data: fbBooking, error: fbError } = await supabase
         .from('bookings')
         .insert({
@@ -161,7 +216,6 @@ export async function POST(req: Request) {
           email,
           phone: phone || null,
           company: company || null,
-          role: role || null,
           quantity,
           status: 'pending',
           amount_pence: amountPence,
