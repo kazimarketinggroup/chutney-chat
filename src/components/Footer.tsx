@@ -146,7 +146,7 @@ export const Footer = () => {
               </p>
               <p>
                 <strong className="text-white font-medium block">Location:</strong>
-                Quaid-E-Azam, Birmingham / TBC
+                Quaid-E-Azam, Birmingham
               </p>
               <p>
                 <strong className="text-white font-medium block">Ticket Price:</strong>

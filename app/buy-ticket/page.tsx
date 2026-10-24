@@ -42,8 +42,8 @@ const slides = [
         color: 'bg-gradient-to-br from-[#A6221D] to-[#79120E]',
         content: (
           <div className="text-xs sm:text-[13px] font-bold leading-snug">
-            Location TBC<br />
-            <span className="font-normal opacity-90">Quaid-E-Azam, Birmingham / TBC</span>
+            Quaid-E-Azam<br />
+            <span className="font-normal opacity-90">Birmingham</span>
           </div>
         )
       },

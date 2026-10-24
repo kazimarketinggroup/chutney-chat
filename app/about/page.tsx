@@ -81,7 +81,7 @@ export default function AboutPage() {
 
               <div className="space-y-1 text-white/90 text-base sm:text-lg font-light">
                 <p>Next Event : Wednesday, 9th December 2026</p>
-                <p>at TBC</p>
+                <p>at Quaid-E-Azam, Birmingham</p>
                 <p>6:30pm - 9:30pm</p>
               </div>
 

@@ -78,8 +78,8 @@ export default function AnnualDinnerAwardsPage() {
               <div>
                 <p className="text-xs font-medium text-white/80 mb-0.5">Location</p>
                 <h3 className="text-sm font-bold text-white leading-snug">
-                  Location TBC<br />
-                  <span className="font-normal opacity-90 text-xs">Quaid-E-Azam, Birmingham / TBC</span>
+                  Quaid-E-Azam<br />
+                  <span className="font-normal opacity-90 text-xs">Birmingham</span>
                 </h3>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function AnnualDinnerAwardsPage() {
               {/* Event Poster Image (uniform aspect 271/376 matching design) */}
               <div className="relative w-full aspect-[271/376] rounded-[18px] overflow-hidden shadow-sm bg-neutral-900">
                 <Image
-                  src="/images/annual_dinner_poster_uniform.png"
+                  src="/images/chutney_chat_11th_anniversary_gala.png"
                   alt="Annual Dinner & Awards"
                   fill
                   sizes="(max-width: 768px) 100vw, 550px"
@@ -166,7 +166,7 @@ export default function AnnualDinnerAwardsPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-[#888888] shrink-0" />
-                    <span>TBC</span>
+                    <span>Quaid-E-Azam, Birmingham</span>
                   </div>
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function AnnualDinnerAwardsPage() {
                 <AddToCalendarButton
                   title="Annual Dinner & Awards - Chutney & Chat"
                   description="Celebrating 11 Years of Award Winning Business Network! Hosted by Abid Khan at Chutney & Chat Annual Dinner & Awards."
-                  location="Quaid-E-Azam, Birmingham / TBC"
+                  location="Quaid-E-Azam, Birmingham"
                   startDate="2026-12-09T18:30:00"
                   endDate="2026-12-09T21:30:00"
                 />
@@ -250,7 +250,8 @@ export default function AnnualDinnerAwardsPage() {
                   </div>
                   
                   <div className="text-xs sm:text-sm text-[#666666] leading-relaxed font-normal space-y-0.5">
-                    <p>TBC</p>
+                    <p className="font-semibold text-[#1f1f1f]">Quaid-E-Azam</p>
+                    <p>Birmingham</p>
                   </div>
                 </div>
               </div>

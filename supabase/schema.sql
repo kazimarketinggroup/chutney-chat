@@ -89,12 +89,12 @@ values
   (
     'annual-dinner-awards',
     'Annual Dinner & Awards',
-    'Wednesday 9th December 2026 - Quaid-E-Azam Birmingham / TBC',
-    'Quaid-E-Azam, Birmingham / TBC',
+    'Wednesday 9th December 2026 - Quaid-E-Azam Birmingham',
+    'Quaid-E-Azam, Birmingham',
     '2026-12-09T18:30:00Z',
     '2026-12-09T21:30:00Z',
     0, -- TBC (client pricing not set yet)
-    '/images/76489026572a735ca4b3b9d34b0f2d3a0a0374d5.png'
+    '/images/chutney_chat_11th_anniversary_gala.png'
   ),
   (
     'summer-business-bbq',
