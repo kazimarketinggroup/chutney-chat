@@ -127,60 +127,12 @@ export async function POST(req: Request) {
 
     const amountPence = (event.price_pence || 0) * quantity;
 
-    // ---- If event is free or TBC reservation, bypass Stripe PaymentIntent ----
-    if (amountPence === 0) {
-      let bookingId: string | null = null;
-      let ticketNumber: string | null = null;
-
-      const { data: booking } = await supabase
-        .from('bookings')
-        .insert({
-          event_id: event.id,
-          name,
-          email,
-          phone: phone || null,
-          company: company || null,
-          role: role || null,
-          quantity,
-          guest_details: guestDetails,
-          status: 'paid',
-          amount_pence: 0,
-          currency: event.currency,
-        })
-        .select('id, ticket_number')
-        .single();
-
-      if (booking?.id) {
-        bookingId = booking.id;
-        ticketNumber = booking.ticket_number;
-      } else {
-        const { data: fbBooking } = await supabase
-          .from('bookings')
-          .insert({
-            event_id: event.id,
-            name,
-            email,
-            phone: phone || null,
-            company: company || null,
-            quantity,
-            status: 'paid',
-            amount_pence: 0,
-            currency: event.currency,
-          })
-          .select('id, ticket_number')
-          .single();
-        bookingId = fbBooking?.id || null;
-        ticketNumber = fbBooking?.ticket_number || null;
-      }
-
-      return NextResponse.json({
-        clientSecret: null,
-        bookingId,
-        ticketNumber: ticketNumber || `CC-2612-${Math.floor(1000 + Math.random() * 9000)}`,
-        amountPence: 0,
-        currency: event.currency,
-        isFree: true,
-      });
+    // ---- If event price is 0 or TBC, tickets are not on sale yet ----
+    if (amountPence === 0 || event.price_pence === 0) {
+      return NextResponse.json(
+        { error: 'Tickets for this event are not on sale yet. Bookings will open soon.' },
+        { status: 400 }
+      );
     }
 
     // ---- create the pending booking BEFORE taking payment ----

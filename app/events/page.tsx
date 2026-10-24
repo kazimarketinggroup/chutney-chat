@@ -151,16 +151,10 @@ export default function EventsPage() {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() =>
-                  openModal({
-                    title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                    price: 'TBC',
-                    eventSlug: 'annual-dinner-awards',
-                  })
-                }
-                className="inline-flex items-center justify-center h-[46px] px-8 rounded-md bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm sm:text-base transition-all shadow-[0px_4px_25px_rgba(255,102,0,0.5)] hover:shadow-[0px_4px_35px_rgba(255,102,0,0.8)] hover:scale-105 cursor-pointer"
+                disabled
+                className="inline-flex items-center justify-center h-[46px] px-8 rounded-md bg-white/40 text-white/90 font-bold text-sm sm:text-base cursor-not-allowed border border-white/20 backdrop-blur-sm"
               >
-                Buy Tickets
+                Tickets Opening Soon
               </button>
             </div>
           </div>

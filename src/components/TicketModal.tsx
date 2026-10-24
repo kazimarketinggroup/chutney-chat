@@ -238,6 +238,11 @@ export function TicketModal() {
     e.preventDefault();
     if (submitting) return;
 
+    if (isTBC) {
+      setError('Tickets for this event are not on sale yet. Bookings will open soon.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -933,25 +938,43 @@ export function TicketModal() {
                             </div>
                           </div>
 
+                          {/* TBC Notice */}
+                          {isTBC && (
+                            <div className="p-3 rounded-xl bg-[#FFF5EE] border border-[#FFD9C0] text-[#9E4A10] text-center text-xs">
+                              <p className="font-semibold">Bookings Not Open Yet</p>
+                              <p className="text-[11px] text-[#73685E] mt-0.5">Tickets for this event are not yet on sale. Please check back soon.</p>
+                            </div>
+                          )}
+
                           {/* CTA Button */}
                           <div className="pt-1">
-                            <button
-                              type="submit"
-                              disabled={submitting}
-                              className="w-full inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] bg-gradient-to-r from-[#FF6600] to-[#F25A00] hover:from-[#E55C00] hover:to-[#DE4F00] text-white font-bold text-sm transition-all shadow-[0_3px_12px_rgba(255,102,0,0.3)] hover:shadow-[0_5px_18px_rgba(255,102,0,0.4)] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                              {submitting ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span>Securing booking…</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>{isTBC ? 'Pay £TBC (Reserve Place)' : 'Continue to payment'}</span>
-                                  <ArrowRight className="w-4 h-4" />
-                                </>
-                              )}
-                            </button>
+                            {isTBC ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-sm cursor-not-allowed"
+                              >
+                                <span>Tickets Opening Soon</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="submit"
+                                disabled={submitting}
+                                className="w-full inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] bg-gradient-to-r from-[#FF6600] to-[#F25A00] hover:from-[#E55C00] hover:to-[#DE4F00] text-white font-bold text-sm transition-all shadow-[0_3px_12px_rgba(255,102,0,0.3)] hover:shadow-[0_5px_18px_rgba(255,102,0,0.4)] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                {submitting ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Securing booking…</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>Continue to payment</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
 
                           {/* Trust Badges */}

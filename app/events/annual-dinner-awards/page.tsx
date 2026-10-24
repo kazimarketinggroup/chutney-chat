@@ -85,16 +85,7 @@ export default function AnnualDinnerAwardsPage() {
             </div>
 
             {/* Card 3: Ticket Price (Dark Golden Amber) */}
-            <div
-              onClick={() =>
-                openModal({
-                  title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                  price: 'TBC',
-                  eventSlug: 'annual-dinner-awards',
-                })
-              }
-              className="relative bg-gradient-to-b from-[#864309] to-[#6B3204] rounded-[24px] p-5 min-h-[160px] flex flex-col justify-end shadow-xl border border-white/10 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-            >
+            <div className="relative bg-gradient-to-b from-[#864309] to-[#6B3204] rounded-[24px] p-5 min-h-[160px] flex flex-col justify-end shadow-xl border border-white/10">
               <Ticket className="absolute top-5 right-5 w-6 h-6 text-white/80 stroke-[1.5] -rotate-45" />
               <div>
                 <p className="text-xs font-medium text-white/90 mb-0.5">Ticket Price</p>
@@ -175,16 +166,10 @@ export default function AnnualDinnerAwardsPage() {
               <div className="flex flex-row items-center gap-4 pt-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    openModal({
-                      title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                      price: 'TBC',
-                      eventSlug: 'annual-dinner-awards',
-                    })
-                  }
-                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-sm text-center shadow-[0px_4px_14px_rgba(255,102,0,0.3)] hover:scale-[1.02] transition-all cursor-pointer"
+                  disabled
+                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-sm text-center cursor-not-allowed"
                 >
-                  Buy Tickets
+                  Tickets Opening Soon
                 </button>
                 <AddToCalendarButton
                   title="Annual Dinner & Awards - Chutney & Chat"

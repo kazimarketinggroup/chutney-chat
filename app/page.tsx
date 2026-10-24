@@ -94,16 +94,10 @@ export default function HomePage() {
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    openModal({
-                      title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                      price: 'TBC',
-                      eventSlug: 'annual-dinner-awards',
-                    })
-                  }
-                  className="inline-flex items-center justify-center h-[44px] px-8 rounded-md bg-white text-[#2d2d2d] font-bold text-[15px] hover:bg-neutral-100 transition-all shadow-md hover:scale-105 cursor-pointer"
+                  disabled
+                  className="inline-flex items-center justify-center h-[44px] px-8 rounded-md bg-white/40 text-white/90 font-bold text-[15px] cursor-not-allowed border border-white/20 backdrop-blur-sm"
                 >
-                  Buy Tickets
+                  Tickets Opening Soon
                 </button>
               </div>
             </div>

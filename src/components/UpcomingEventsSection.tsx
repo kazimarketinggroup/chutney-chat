@@ -197,6 +197,25 @@ export function UpcomingEventsSection() {
                     >
                       Sold Out
                     </button>
+                  ) : evt.price === 'TBC' ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled
+                        className="flex-1 inline-flex items-center justify-center h-[42px] sm:h-[44px] rounded-[10px] sm:rounded-[12px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-xs sm:text-sm cursor-not-allowed"
+                      >
+                        Tickets Opening Soon
+                      </button>
+                      {evt.calendarData && (
+                        <AddToCalendarButton
+                          title={evt.calendarData.title}
+                          description={evt.calendarData.description}
+                          location={evt.calendarData.location}
+                          startDate={evt.calendarData.startDate}
+                          endDate={evt.calendarData.endDate}
+                        />
+                      )}
+                    </>
                   ) : (
                     <>
                       <button
