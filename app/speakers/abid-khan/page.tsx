@@ -45,7 +45,7 @@ export default function AbidKhanPage() {
         </div>
 
         {/* Hero Bottom-Left Header Content */}
-        <div className="relative z-20 max-w-[1170px] mx-auto px-6 w-full text-left space-y-2 text-white">
+        <div className="relative z-20 max-w-[1170px] mx-auto px-4 sm:px-6 w-full text-left space-y-2 text-white">
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
             Abid Khan
           </h1>
@@ -90,7 +90,7 @@ export default function AbidKhanPage() {
               </p>
 
               {/* Social Media Circular Buttons Row */}
-              <div className="flex items-center gap-3.5 pt-4">
+              <div className="flex items-center gap-3.5 pt-4 flex-wrap">
                 {/* Facebook */}
                 <a
                   href="https://www.facebook.com/SP55DEE/"

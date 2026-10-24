@@ -163,7 +163,7 @@ export default function SpeakersPage() {
       {/* 2. 5-COLUMN MATRIX SPEAKERS GRID (Top red box in reference image) */}
       {/* ========================================================================= */}
       <section id="speakers-matrix" className="py-16 sm:py-24 bg-white text-left">
-        <div className="max-w-[1170px] mx-auto px-6">
+        <div className="max-w-[1170px] mx-auto px-4 sm:px-6">
           
           {/* 5-Column Matrix Speaker Grid with Subtle Orange Dashed Borders */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 border-t border-l border-dashed border-[#F3C49B]/70 rounded-xl overflow-hidden">

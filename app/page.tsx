@@ -68,7 +68,7 @@ export default function HomePage() {
         </div>
 
         {/* Hero Main Header & Subtitle Grid */}
-        <div className="relative z-20 max-w-[1340px] w-full mx-auto px-6 pt-10 my-auto">
+        <div className="relative z-20 max-w-[1340px] w-full mx-auto px-4 sm:px-6 pt-10 my-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
             {/* Left Column Content */}
             <div className="lg:col-span-7 space-y-6">
@@ -78,7 +78,7 @@ export default function HomePage() {
                 </span>
               </div>
 
-              <h1 className="text-5xl sm:text-7xl font-extrabold text-white leading-tight tracking-tight drop-shadow-md">
+              <h1 className="text-4xl xs:text-5xl sm:text-7xl font-extrabold text-white leading-tight tracking-tight drop-shadow-md">
                 Chutney &amp; Chat
               </h1>
 
@@ -120,8 +120,8 @@ export default function HomePage() {
         {/* ========================================================================= */}
         {/* HERO STATISTICS BAR — Inside bottom of Hero image section with gradient border */}
         {/* ========================================================================= */}
-        <div className="relative z-20 w-full max-w-[1340px] mx-auto px-6 mt-12 mb-4">
-          <div className="bg-black/50 backdrop-blur-md border-[1.5px] border-[#D87D38]/80 rounded-[20px] py-6 px-6 sm:px-10 shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_20px_rgba(216,125,56,0.15)]">
+        <div className="relative z-20 w-full max-w-[1340px] mx-auto px-4 sm:px-6 mt-12 mb-4">
+          <div className="bg-black/50 backdrop-blur-md border-[1.5px] border-[#D87D38]/80 rounded-[20px] py-5 px-4 sm:px-8 shadow-[0_20px_50px_rgba(0,0,0,0.6),0_0_20px_rgba(216,125,56,0.15)]">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:divide-x divide-white/20">
               {/* Stat 1: 3 Event Locations */}
               <div className="flex items-center justify-start sm:justify-center gap-3.5 p-2 sm:p-0">

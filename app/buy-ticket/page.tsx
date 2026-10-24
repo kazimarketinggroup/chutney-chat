@@ -182,10 +182,10 @@ export default function BuyTicketPage() {
                       });
                     }
                   }}
-                  className={`relative overflow-hidden rounded-[24px] sm:rounded-[32px] p-5 sm:p-6 w-[calc(50%-6px)] max-w-[220px] sm:w-[220px] h-[132px] sm:h-[160px] flex flex-col justify-between shadow-2xl transition-transform hover:-translate-y-1 ${card.color} ${card.type === 'ticket' ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}`}
+                  className={`relative overflow-hidden rounded-[20px] sm:rounded-[32px] p-3.5 xs:p-4.5 sm:p-6 w-[calc(50%-6px)] max-w-[220px] sm:w-[220px] min-h-[132px] sm:h-[160px] flex flex-col justify-between shadow-2xl transition-transform hover:-translate-y-1 ${card.color} ${card.type === 'ticket' ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}`}
                 >
                   {/* Top Right Icon */}
-                  <div className="absolute top-5 right-5 text-white">
+                  <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 text-white">
                     {card.icon}
                   </div>
 

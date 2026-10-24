@@ -65,7 +65,7 @@ export default function AboutPage() {
         </div>
 
         {/* Hero Main Header & Subtitle Grid */}
-        <div className="relative z-20 max-w-[1340px] w-full mx-auto px-6 pt-10 my-auto">
+        <div className="relative z-20 max-w-[1340px] w-full mx-auto px-4 sm:px-6 pt-10 my-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
             {/* Left Column Content */}
             <div className="lg:col-span-7 space-y-6">
@@ -75,7 +75,7 @@ export default function AboutPage() {
                 </span>
               </div>
 
-              <h1 className="text-5xl sm:text-7xl font-extrabold text-white leading-tight tracking-tight drop-shadow-md">
+              <h1 className="text-4xl xs:text-5xl sm:text-7xl font-extrabold text-white leading-tight tracking-tight drop-shadow-md">
                 Social, Business &amp; Balti.
               </h1>
 

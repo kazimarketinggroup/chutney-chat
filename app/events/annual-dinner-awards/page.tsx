@@ -51,7 +51,7 @@ export default function AnnualDinnerAwardsPage() {
 
           {/* Title */}
           <div className="space-y-2">
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+            <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
               Annual Dinner &amp; Awards
             </h1>
             <p className="text-white/85 text-base sm:text-lg font-light max-w-2xl mx-auto">

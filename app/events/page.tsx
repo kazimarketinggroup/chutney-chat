@@ -138,9 +138,9 @@ export default function EventsPage() {
         </div>
 
         {/* Hero Content Container */}
-        <div className="relative z-20 max-w-[900px] w-full mx-auto px-6 h-full flex flex-col justify-center items-center text-center">
+        <div className="relative z-20 max-w-[900px] w-full mx-auto px-4 sm:px-6 h-full flex flex-col justify-center items-center text-center">
           <div className="space-y-6 text-center max-w-[780px] mx-auto flex flex-col items-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.15] tracking-tight drop-shadow-md">
+            <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.15] tracking-tight drop-shadow-md">
               Education, Networking<br className="hidden sm:inline" /> &amp; excellent food
             </h1>
 

@@ -38,7 +38,7 @@ export default function SafarazAliPage() {
         </div>
 
         {/* Hero Bottom-Left Header Content */}
-        <div className="relative z-20 max-w-[1170px] mx-auto px-6 w-full text-left space-y-2 text-white">
+        <div className="relative z-20 max-w-[1170px] mx-auto px-4 sm:px-6 w-full text-left space-y-2 text-white">
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
             Safaraz Ali MBE
           </h1>
