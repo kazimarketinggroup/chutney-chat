@@ -197,9 +197,10 @@ export default function HomePage() {
       {/* ========================================================================= */}
       <section className="py-16 sm:py-20 bg-white">
         <div className="max-w-[1340px] mx-auto px-4 sm:px-6">
-          <div className="bg-white border-2 border-[#FF5500]/80 rounded-[24px] p-8 sm:p-12 shadow-[0_15px_40px_rgba(0,0,0,0.06)] space-y-6 text-left">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#2d2d2d] tracking-tight leading-tight">
-              From Chutney to Chat,<br /> Where Conversations Get Spicy!
+          <div className="bg-white border-2 border-[#FF5500]/80 rounded-[24px] p-6 sm:p-10 md:p-12 shadow-[0_15px_40px_rgba(0,0,0,0.06)] space-y-5 sm:space-y-6 text-left">
+            <h2 className="text-[22px] sm:text-3xl md:text-4xl font-extrabold text-[#2d2d2d] tracking-tight leading-tight">
+              <span className="block">From Chutney to Chat,</span>
+              <span className="block">Where Conversations Get Spicy!</span>
             </h2>
 
             <p className="text-[#555555] text-base sm:text-[16px] leading-[1.8] font-normal max-w-[1100px]">
