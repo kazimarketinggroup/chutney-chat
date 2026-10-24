@@ -89,7 +89,7 @@ export default function AnnualDinnerAwardsPage() {
               onClick={() =>
                 openModal({
                   title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                  price: 'TBC',
+                  price: '£1.00',
                   eventSlug: 'annual-dinner-awards',
                 })
               }
@@ -98,7 +98,7 @@ export default function AnnualDinnerAwardsPage() {
               <Ticket className="absolute top-5 right-5 w-6 h-6 text-white/80 stroke-[1.5] -rotate-45" />
               <div>
                 <p className="text-xs font-medium text-white/90 mb-0.5">Ticket Price</p>
-                <h3 className="text-2xl font-extrabold text-white">TBC</h3>
+                <h3 className="text-2xl font-extrabold text-white">£1.00</h3>
               </div>
             </div>
 
@@ -178,7 +178,7 @@ export default function AnnualDinnerAwardsPage() {
                   onClick={() =>
                     openModal({
                       title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-                      price: 'TBC',
+                      price: '£1.00',
                       eventSlug: 'annual-dinner-awards',
                     })
                   }

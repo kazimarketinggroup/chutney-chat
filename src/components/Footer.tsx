@@ -150,7 +150,7 @@ export const Footer = () => {
               </p>
               <p>
                 <strong className="text-white font-medium block">Ticket Price:</strong>
-                TBC (Includes 3-Course Balti Meal &amp; Awards)
+                £1.00 (Includes 3-Course Balti Meal &amp; Awards)
               </p>
             </div>
           </div>

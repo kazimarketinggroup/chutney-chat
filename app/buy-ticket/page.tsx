@@ -19,7 +19,7 @@ const slides = [
     id: 1,
     title: 'Annual Dinner & Awards',
     eventTitle: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-    price: 'TBC',
+    price: '£1.00',
     eventSlug: 'annual-dinner-awards',
     bg: '/images/buy_ticket_hero_bg.png',
     pill: '11 Years of Award Winning Business Network',
@@ -54,7 +54,7 @@ const slides = [
         content: (
           <div>
             <div className="text-[11px] sm:text-xs text-white/80 mb-0.5">Ticket Price</div>
-            <div className="text-xl sm:text-[22px] font-bold leading-none">TBC</div>
+            <div className="text-xl sm:text-[22px] font-bold leading-none">£1.00</div>
           </div>
         )
       },

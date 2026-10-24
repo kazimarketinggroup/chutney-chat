@@ -58,7 +58,7 @@ const EVENTS: EventItem[] = [
     timeDisplay: '6:30 pm - 9:30 pm',
     venueDisplay: 'Quaid-E-Azam, Birmingham',
     image: '/images/chutney_chat_11th_anniversary_gala.png',
-    price: 'TBC',
+    price: '£1.00',
     isSoldOut: false,
     calendarData: {
       title: 'Annual Dinner & Awards - Chutney & Chat',

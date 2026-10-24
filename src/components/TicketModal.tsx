@@ -60,7 +60,7 @@ interface TicketModalContextType {
 const defaultEventDetails: TicketEventDetails = {
   eventSlug: 'annual-dinner-awards',
   title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-  price: 'TBC',
+  price: '£1.00',
 };
 
 const TicketModalContext = createContext<TicketModalContextType>({
