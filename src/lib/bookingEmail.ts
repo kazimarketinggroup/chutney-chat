@@ -3,7 +3,9 @@ import { formatPrice, type BookingRow, type EventRow } from './supabase';
 
 /** Server-only: sends the attendee ticket and the internal notification. */
 
-const ADMIN_EMAIL = process.env.BOOKING_NOTIFY_EMAIL || 'officialmdmahadi@gmail.com';
+const ADMIN_EMAIL = process.env.BOOKING_NOTIFY_EMAIL || 'abidspersonal55@gmail.com';
+const rawSender = process.env.EMAIL_FROM || 'tickets@chutneyandchat.co.uk';
+const SENDER_EMAIL = rawSender.match(/<([^>]+)>/)?.[1] || rawSender;
 
 const BRAND = {
   orange: '#EE6422',
@@ -16,12 +18,26 @@ const BRAND = {
   line: '#F0E2D4',
 };
 
-function getTransporter() {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-  if (!user || !pass) return null;
+export function getTransporter() {
+  const pass = process.env.EMAIL_PASS || process.env.RESEND_API_KEY;
+  if (!pass) return null;
 
-  const host = process.env.EMAIL_HOST;
+  const host = process.env.EMAIL_HOST || (pass.startsWith('re_') ? 'smtp.resend.com' : undefined);
+  const user = process.env.EMAIL_USER || (pass.startsWith('re_') ? 'resend' : undefined);
+
+  if (host === 'smtp.resend.com' || pass.startsWith('re_')) {
+    return nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass,
+      },
+    });
+  }
+
+  if (!user) return null;
   const port = Number(process.env.EMAIL_PORT) || 587;
 
   // If host is explicitly specified OR if email belongs to outlook/office365
@@ -164,7 +180,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
 
   mailPromises.push(
     transporter.sendMail({
-      from: `"Chutney & Chat" <${process.env.EMAIL_USER}>`,
+      from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
       to: booking.email,
       subject: `Your ticket ${ticket} — ${eventTitle}`,
       html: attendeeHtml,
@@ -224,7 +240,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
 
         mailPromises.push(
           transporter.sendMail({
-            from: `"Chutney & Chat" <${process.env.EMAIL_USER}>`,
+            from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
             to: guestEmail,
             subject: `🎟️ Your E-Ticket ${guestTicketRef} — ${eventTitle}`,
             html: guestHtml,
@@ -252,7 +268,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
   const adminHtml = buildAdminEmail({ booking, eventTitle, venue, day, ticket, total });
   mailPromises.push(
     transporter.sendMail({
-      from: `"Chutney & Chat Bookings" <${process.env.EMAIL_USER}>`,
+      from: `"Chutney & Chat Bookings" <${SENDER_EMAIL}>`,
       to: ADMIN_EMAIL,
       replyTo: booking.email,
       subject: `New booking ${ticket} — ${booking.name} — ${eventTitle}`,

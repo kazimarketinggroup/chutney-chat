@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { getTransporter } from '@/lib/bookingEmail';
+
+const ADMIN_EMAIL = process.env.BOOKING_NOTIFY_EMAIL || 'abidspersonal55@gmail.com';
+const rawSender = process.env.EMAIL_FROM || 'tickets@chutneyandchat.co.uk';
+const SENDER_EMAIL = rawSender.match(/<([^>]+)>/)?.[1] || rawSender;
 
 export async function POST(req: Request) {
   try {
@@ -8,14 +12,11 @@ export async function POST(req: Request) {
     const name = data.name || 'Not provided';
     const email = data.email || 'Not provided';
     
-    // Create Nodemailer transporter using Gmail
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // Needs an App Password from Google
-      },
-    });
+    const transporter = getTransporter();
+    if (!transporter) {
+      console.error('[contact] Email transporter not configured');
+      return NextResponse.json({ success: false, message: 'Email service not configured' }, { status: 500 });
+    }
 
     let subject = '';
     let htmlContent = '';
@@ -90,8 +91,8 @@ export async function POST(req: Request) {
 
     // Send Mail
     await transporter.sendMail({
-      from: `"Chutney & Chat Forms" <${process.env.EMAIL_USER}>`,
-      to: 'officialmdmahadi@gmail.com',
+      from: `"Chutney & Chat Forms" <${SENDER_EMAIL}>`,
+      to: ADMIN_EMAIL,
       replyTo: email,
       subject: subject,
       html: htmlContent,
