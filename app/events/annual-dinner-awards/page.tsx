@@ -89,7 +89,8 @@ export default function AnnualDinnerAwardsPage() {
               <Ticket className="absolute top-5 right-5 w-6 h-6 text-white/80 stroke-[1.5] -rotate-45" />
               <div>
                 <p className="text-xs font-medium text-white/90 mb-0.5">Ticket Price</p>
-                <h3 className="text-2xl font-extrabold text-white">TBC</h3>
+                <h3 className="text-2xl font-extrabold text-white">£49.99</h3>
+                <p className="text-[11px] text-white/80 mt-0.5">Table of 10: £450</p>
               </div>
             </div>
 
@@ -166,10 +167,16 @@ export default function AnnualDinnerAwardsPage() {
               <div className="flex flex-row items-center gap-4 pt-2">
                 <button
                   type="button"
-                  disabled
-                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-sm text-center cursor-not-allowed"
+                  onClick={() =>
+                    openModal({
+                      title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
+                      price: '£49.99',
+                      eventSlug: 'annual-dinner-awards',
+                    })
+                  }
+                  className="flex-1 inline-flex items-center justify-center h-[46px] rounded-[10px] bg-[#EE6422] hover:bg-[#d65316] text-white font-bold text-sm text-center transition-all shadow-[0_4px_15px_rgba(238,100,34,0.35)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
-                  Tickets Opening Soon
+                  Buy Tickets
                 </button>
                 <AddToCalendarButton
                   title="Annual Dinner & Awards - Chutney & Chat"
@@ -202,10 +209,19 @@ export default function AnnualDinnerAwardsPage() {
                     Celebrating 11 Years of Award Winning Business Network
                   </p>
 
+                  <div className="space-y-1.5 pt-2 text-xs sm:text-sm text-[#444444] font-medium">
+                    <p>
+                      <strong className="text-[#1F1F1F]">Standard Ticket:</strong> £49.99 per person (Includes 3-Course Balti Meal)
+                    </p>
+                    <p>
+                      <strong className="text-[#1F1F1F]">Table of 10:</strong> £450 (Accommodates 10 people • Save £49.90)
+                    </p>
+                  </div>
+
                   <div className="space-y-3 pt-2 text-xs sm:text-sm text-[#666666] font-medium">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-[#888888] shrink-0" />
-                      <span>9th December 2026</span>
+                      <span>Wednesday 9th December 2026</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-[#888888] shrink-0" />

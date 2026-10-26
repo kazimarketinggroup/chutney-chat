@@ -60,7 +60,7 @@ interface TicketModalContextType {
 const defaultEventDetails: TicketEventDetails = {
   eventSlug: 'annual-dinner-awards',
   title: 'Wednesday 9th December 2026 - Annual Dinner & Awards',
-  price: 'TBC',
+  price: '£49.99',
 };
 
 const TicketModalContext = createContext<TicketModalContextType>({
@@ -126,6 +126,7 @@ export function TicketModal() {
 
   const [step, setStep] = useState<Step>('details');
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [bookingType, setBookingType] = useState<'individual' | 'table'>('individual');
   const [guests, setGuests] = useState<GuestState[]>([]);
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -179,6 +180,7 @@ export function TicketModal() {
   const resetAll = () => {
     setStep('details');
     setFormData(EMPTY_FORM);
+    setBookingType('individual');
     setGuests([]);
     setIsCustomQuantity(false);
     setSession(null);
@@ -200,10 +202,12 @@ export function TicketModal() {
     return eventDetails.price.toUpperCase().includes('TBC');
   }, [eventDetails.price]);
 
+  const isTableBooking = bookingType === 'table';
+
   const unitPrice = useMemo(() => {
     if (isTBC) return 0;
     const match = eventDetails.price.match(/[\d.]+/);
-    return match ? parseFloat(match[0]) : 35.0;
+    return match ? parseFloat(match[0]) : 49.99;
   }, [eventDetails.price, isTBC]);
 
   const currencySymbol = useMemo(() => {
@@ -213,8 +217,12 @@ export function TicketModal() {
 
   const calculatedSubtotal = useMemo(() => {
     if (isTBC) return 'TBC';
+    if (isTableBooking) {
+      const tableCount = Math.max(1, Math.floor(formData.quantity / 10));
+      return (450 * tableCount).toFixed(2);
+    }
     return (unitPrice * formData.quantity).toFixed(2);
-  }, [unitPrice, formData.quantity, isTBC]);
+  }, [unitPrice, formData.quantity, isTBC, isTableBooking]);
 
   // Parse title into date and venue if separated by hyphen for premium badges
   const parsedEvent = useMemo(() => {
@@ -252,6 +260,7 @@ export function TicketModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventSlug: eventDetails.eventSlug,
+          ticketType: bookingType,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -441,151 +450,261 @@ export function TicketModal() {
                       {/* Left Column: Form Cards (7 cols on lg) */}
                       <div className="lg:col-span-7 space-y-3 sm:space-y-3.5">
                         
-                        {/* 1. Ticket Quantity Bar */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] gap-2.5 sm:gap-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-[#FFF0E2] text-[#FF6600] flex items-center justify-center shrink-0">
-                              <Ticket className="w-3.5 h-3.5" />
+                        {/* Package Selection: Individual vs Table of 10 */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={submitting}
+                            onClick={() => {
+                              setBookingType('individual');
+                              if (formData.quantity > 10 && !isCustomQuantity) {
+                                setFormData((prev) => ({ ...prev, quantity: 1 }));
+                              }
+                            }}
+                            className={`p-2.5 sm:p-3 rounded-[12px] border text-left transition-all cursor-pointer ${
+                              bookingType === 'individual'
+                                ? 'bg-[#FFF8F2] border-[#FF6600] ring-1 ring-[#FF6600] shadow-xs'
+                                : 'bg-[#FFFDFB] border-[#E8DCD0] text-[#73685E] hover:border-[#DDD0C2]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1F]">Individual Ticket</span>
+                              <span className="text-xs sm:text-sm font-extrabold text-[#FF6600]">{eventDetails.price}</span>
                             </div>
-                            <div>
-                              <div className="text-xs sm:text-sm font-bold text-[#1F1F1F] leading-tight">
-                                Standard Admission • {eventDetails.price}
-                              </div>
-                              <div className="text-[10px] sm:text-[11px] text-[#73685E]">
-                                3-Course Balti Meal &amp; Networking Included
-                              </div>
+                            <p className="text-[10px] text-[#73685E]">Per person • Includes 3-course meal</p>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={submitting}
+                            onClick={() => {
+                              setBookingType('table');
+                              setFormData((prev) => ({ ...prev, quantity: 10 }));
+                              setIsCustomQuantity(false);
+                            }}
+                            className={`p-2.5 sm:p-3 rounded-[12px] border text-left transition-all cursor-pointer relative overflow-hidden ${
+                              bookingType === 'table'
+                                ? 'bg-[#FFF8F2] border-[#FF6600] ring-1 ring-[#FF6600] shadow-xs'
+                                : 'bg-[#FFFDFB] border-[#E8DCD0] text-[#73685E] hover:border-[#DDD0C2]'
+                            }`}
+                          >
+                            <span className="absolute top-1.5 right-1.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#22A06B] text-white uppercase tracking-wider">
+                              Save £49.90
+                            </span>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1F]">Table of 10</span>
+                              <span className="text-xs sm:text-sm font-extrabold text-[#FF6600]">£450</span>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                            {!isCustomQuantity ? (
-                              <>
-                                <div className="relative w-32 sm:w-36 shrink-0">
-                                  <select
-                                    id="modal-quantity"
-                                    name="quantity"
-                                    disabled={submitting}
-                                    value={formData.quantity <= 10 ? formData.quantity : 'more'}
-                                    onChange={(e) => {
-                                      if (e.target.value === 'more') {
-                                        setIsCustomQuantity(true);
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          quantity: Math.max(prev.quantity, 11),
-                                        }));
-                                      } else {
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          quantity: Number(e.target.value),
-                                        }));
-                                      }
-                                    }}
-                                    className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
-                                  >
-                                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                                      <option key={n} value={n}>
-                                        {n} {n === 1 ? 'ticket' : 'tickets'} ({currencySymbol}
-                                        {(unitPrice * n).toFixed(0)})
-                                      </option>
-                                    ))}
-                                    <option value="more">10+ (Add More)...</option>
-                                  </select>
-                                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
-                                    <ChevronDown className="w-3.5 h-3.5" />
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={submitting}
-                                  onClick={() => {
-                                    setIsCustomQuantity(true);
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      quantity: prev.quantity >= 10 ? prev.quantity + 1 : 11,
-                                    }));
-                                  }}
-                                  title="Add 10+ tickets or group booking"
-                                  className="h-8 sm:h-9 px-2.5 rounded-[9px] bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold text-xs flex items-center gap-1 border border-[#F5D8C0] transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>10+</span>
-                                </button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-1.5 bg-white border border-[#DDD0C2] rounded-[9px] p-1 shadow-sm">
-                                <button
-                                  type="button"
-                                  disabled={submitting || formData.quantity <= 1}
-                                  onClick={() => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      quantity: Math.max(1, prev.quantity - 1),
-                                    }));
-                                  }}
-                                  className="w-7 h-7 rounded-md bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
-                                  aria-label="Decrease tickets"
-                                >
-                                  <Minus className="w-3.5 h-3.5" />
-                                </button>
-
-                                <div className="flex items-center px-1">
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    max={100}
-                                    disabled={submitting}
-                                    value={formData.quantity}
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value, 10);
-                                      if (isNaN(val)) {
-                                        setFormData((prev) => ({ ...prev, quantity: 1 }));
-                                      } else {
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          quantity: Math.min(100, Math.max(1, val)),
-                                        }));
-                                      }
-                                    }}
-                                    className="w-9 text-center text-xs font-bold text-[#1F1F1F] bg-transparent outline-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  />
-                                  <span className="text-[11px] font-semibold text-[#73685E] pr-1">
-                                    tickets
-                                  </span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={submitting || formData.quantity >= 100}
-                                  onClick={() => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      quantity: Math.min(100, prev.quantity + 1),
-                                    }));
-                                  }}
-                                  className="w-7 h-7 rounded-md bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
-                                  aria-label="Increase tickets"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={submitting}
-                                  onClick={() => {
-                                    setIsCustomQuantity(false);
-                                    if (formData.quantity > 10) {
-                                      setFormData((prev) => ({ ...prev, quantity: 10 }));
-                                    }
-                                  }}
-                                  className="ml-1 text-[10px] text-[#8C7E72] hover:text-[#FF6600] hover:underline px-1 whitespace-nowrap cursor-pointer"
-                                >
-                                  1–10 list
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                            <p className="text-[10px] text-[#73685E]">Accommodates 10 people</p>
+                          </button>
                         </div>
+
+                        {/* 1. Ticket Quantity Bar */}
+                        {bookingType === 'table' ? (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] gap-2.5 sm:gap-0">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-[#EAF7EE] text-[#22A06B] flex items-center justify-center shrink-0">
+                                <Users className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className="text-xs sm:text-sm font-bold text-[#1F1F1F] leading-tight">
+                                  Table Package • 10 Guests Accommodated
+                                </div>
+                                <div className="text-[10px] sm:text-[11px] text-[#73685E]">
+                                  £450 per table (Includes 3-Course meal for all 10 attendees)
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                              <div className="relative w-40 sm:w-44 shrink-0">
+                                <select
+                                  id="modal-table-quantity"
+                                  disabled={submitting}
+                                  value={formData.quantity}
+                                  onChange={(e) => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      quantity: Number(e.target.value),
+                                    }));
+                                  }}
+                                  className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
+                                >
+                                  <option value={10}>1 Table (10 guests • £450)</option>
+                                  <option value={20}>2 Tables (20 guests • £900)</option>
+                                  <option value={30}>3 Tables (30 guests • £1,350)</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] gap-2.5 sm:gap-0">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-[#FFF0E2] text-[#FF6600] flex items-center justify-center shrink-0">
+                                <Ticket className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className="text-xs sm:text-sm font-bold text-[#1F1F1F] leading-tight">
+                                  Standard Admission • {eventDetails.price}
+                                </div>
+                                <div className="text-[10px] sm:text-[11px] text-[#73685E]">
+                                  3-Course Balti Meal &amp; Networking Included
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                              {!isCustomQuantity ? (
+                                <>
+                                  <div className="relative w-32 sm:w-36 shrink-0">
+                                    <select
+                                      id="modal-quantity"
+                                      name="quantity"
+                                      disabled={submitting}
+                                      value={formData.quantity <= 10 ? formData.quantity : 'more'}
+                                      onChange={(e) => {
+                                        if (e.target.value === 'more') {
+                                          setIsCustomQuantity(true);
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            quantity: Math.max(prev.quantity, 11),
+                                          }));
+                                        } else {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            quantity: Number(e.target.value),
+                                          }));
+                                        }
+                                      }}
+                                      className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
+                                    >
+                                      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                                        <option key={n} value={n}>
+                                          {n} {n === 1 ? 'ticket' : 'tickets'} ({currencySymbol}
+                                          {(unitPrice * n).toFixed(0)})
+                                        </option>
+                                      ))}
+                                      <option value="more">10+ (Add More)...</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    disabled={submitting}
+                                    onClick={() => {
+                                      setIsCustomQuantity(true);
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        quantity: prev.quantity >= 10 ? prev.quantity + 1 : 11,
+                                      }));
+                                    }}
+                                    title="Add 10+ tickets or group booking"
+                                    className="h-8 sm:h-9 px-2.5 rounded-[9px] bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold text-xs flex items-center gap-1 border border-[#F5D8C0] transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>10+</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-1.5 bg-white border border-[#DDD0C2] rounded-[9px] p-1 shadow-sm">
+                                  <button
+                                    type="button"
+                                    disabled={submitting || formData.quantity <= 1}
+                                    onClick={() => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        quantity: Math.max(1, prev.quantity - 1),
+                                      }));
+                                    }}
+                                    className="w-7 h-7 rounded-md bg-[#FFF5EB] hover:bg-[#FFE8D6] text-[#FF6600] font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
+                                    aria-label="Decrease tickets"
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <div className="flex items-center px-1">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={100}
+                                      disabled={submitting}
+                                      value={formData.quantity}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (isNaN(val)) {
+                                          setFormData((prev) => ({ ...prev, quantity: 1 }));
+                                        } else {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            quantity: Math.min(100, Math.max(1, val)),
+                                          }));
+                                        }
+                                      }}
+                                      className="w-9 text-center text-xs font-bold text-[#1F1F1F] bg-transparent outline-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <span className="text-[11px] font-semibold text-[#73685E] pr-1">
+                                      tickets
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    disabled={submitting || formData.quantity >= 100}
+                                    onClick={() => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        quantity: Math.min(100, prev.quantity + 1),
+                                      }));
+                                    }}
+                                    className="w-7 h-7 rounded-md bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold flex items-center justify-center disabled:opacity-40 transition-colors cursor-pointer text-sm"
+                                    aria-label="Increase tickets"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={submitting}
+                                    onClick={() => {
+                                      setIsCustomQuantity(false);
+                                      if (formData.quantity > 10) {
+                                        setFormData((prev) => ({ ...prev, quantity: 10 }));
+                                      }
+                                    }}
+                                    className="ml-1 text-[10px] text-[#8C7E72] hover:text-[#FF6600] hover:underline px-1 whitespace-nowrap cursor-pointer"
+                                  >
+                                    1–10 list
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tip for Individual when quantity is 10 */}
+                        {bookingType === 'individual' && formData.quantity === 10 && (
+                          <div className="p-2.5 rounded-[12px] bg-[#EAF7EE] border border-[#BCE4C9] flex items-center justify-between gap-2 text-xs">
+                            <span className="text-[#1A6B44] text-[11px]">
+                              Booking for 10 people? Save £49.90 with our Table of 10 package for £450!
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBookingType('table');
+                                setFormData((prev) => ({ ...prev, quantity: 10 }));
+                              }}
+                              className="px-2.5 py-1 rounded-[7px] bg-[#22A06B] hover:bg-[#1C8457] text-white text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors shrink-0"
+                            >
+                              Switch to Table (£450)
+                            </button>
+                          </div>
+                        )}
 
                         {/* 2. Primary Attendee (Ticket #1) Card */}
                         <div className="p-3 sm:p-3.5 rounded-[16px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] space-y-2.5">
@@ -905,20 +1024,40 @@ export function TicketModal() {
 
                           {/* Itemized Breakdown */}
                           <div className="space-y-2 text-xs">
-                            <div className="flex items-center justify-between text-[#403934]">
-                              <span>Standard Ticket × {formData.quantity}</span>
-                              <span className="font-semibold text-[#1F1F1F]">
-                                {currencySymbol}{calculatedSubtotal}
-                              </span>
-                            </div>
+                            {isTableBooking ? (
+                              <div className="flex items-center justify-between text-[#403934]">
+                                <span>Table of 10 Package × {Math.max(1, Math.floor(formData.quantity / 10))}</span>
+                                <span className="font-semibold text-[#1F1F1F]">
+                                  {currencySymbol}{calculatedSubtotal}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between text-[#403934]">
+                                <span>Standard Ticket × {formData.quantity}</span>
+                                <span className="font-semibold text-[#1F1F1F]">
+                                  {currencySymbol}{calculatedSubtotal}
+                                </span>
+                              </div>
+                            )}
 
                             <div className="flex items-center justify-between text-[#403934]">
                               <span>3-Course Balti Meal</span>
-                              <span className="text-[#22A06B] font-medium">Included</span>
+                              <span className="text-[#22A06B] font-medium">
+                                {isTableBooking ? `Included (${formData.quantity} guests)` : 'Included'}
+                              </span>
                             </div>
 
+                            {isTableBooking && (
+                              <div className="flex items-center justify-between text-[#403934]">
+                                <span>Table Seating</span>
+                                <span className="text-[#22A06B] font-medium">
+                                  {formData.quantity} Seats Accommodated
+                                </span>
+                              </div>
+                            )}
+
                             <div className="flex items-center justify-between text-[#403934]">
-                              <span>Booking & Service Fee</span>
+                              <span>Booking &amp; Service Fee</span>
                               <span className="text-[#22A06B] font-medium">Free</span>
                             </div>
 
@@ -934,7 +1073,9 @@ export function TicketModal() {
                                   Total Due
                                 </span>
                                 <span className="text-[10px] text-[#8C7E72]">
-                                  {formData.quantity} {formData.quantity === 1 ? 'attendee pass' : 'attendee passes'}
+                                  {isTableBooking
+                                    ? `${Math.max(1, Math.floor(formData.quantity / 10))} table (${formData.quantity} guests)`
+                                    : `${formData.quantity} ${formData.quantity === 1 ? 'attendee pass' : 'attendee passes'}`}
                                 </span>
                               </div>
                               <div className="text-right">
@@ -1176,7 +1317,7 @@ function SuccessStep({
       await downloadTicketPDF({
         ticketNumber,
         eventTitle: details?.title || eventTitle,
-        venue: details?.venue || (details?.title?.includes('Coventry') ? 'The Farmhouse, Coventry' : 'Tipu Sultan, Leicester'),
+        venue: details?.venue || (details?.title?.includes('Annual') || details?.title?.includes('Awards') || eventTitle.includes('Annual') ? 'Quaid-E-Azam, Birmingham' : details?.title?.includes('Coventry') ? 'The Farmhouse, Coventry' : 'Tipu Sultan, Leicester'),
         date: dayText,
         time: timeText,
         total: formatPence(amountPence, currency),

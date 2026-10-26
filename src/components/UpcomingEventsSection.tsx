@@ -58,7 +58,7 @@ const EVENTS: EventItem[] = [
     timeDisplay: '6:30 pm - 9:30 pm',
     venueDisplay: 'Quaid-E-Azam, Birmingham',
     image: '/images/chutney_chat_11th_anniversary_gala.png',
-    price: 'TBC',
+    price: '£49.99',
     isSoldOut: false,
     calendarData: {
       title: 'Annual Dinner & Awards - Chutney & Chat',
@@ -167,6 +167,11 @@ export function UpcomingEventsSection() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-[#73685E]">
                     Ticket Price: <strong className="text-[#1F1F1F] font-bold">{evt.price}</strong>
+                    {evt.slug === 'annual-dinner-awards' && (
+                      <span className="text-[10px] text-[#8C7E72] font-normal ml-1">
+                        (Table of 10: £450)
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"

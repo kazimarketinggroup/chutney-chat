@@ -17,6 +17,7 @@ interface GuestInput {
 
 interface CheckoutBody {
   eventSlug?: string;
+  ticketType?: 'individual' | 'standard' | 'table';
   name?: string;
   email?: string;
   phone?: string;
@@ -125,10 +126,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const amountPence = (event.price_pence || 0) * quantity;
+    const isTable = body.ticketType === 'table';
+    let amountPence: number;
+
+    if (isTable) {
+      // Table accommodating 10 people for £450 (45,000 pence)
+      const tableCount = Math.max(1, Math.floor(quantity / 10));
+      amountPence = 45000 * tableCount;
+    } else {
+      amountPence = (event.price_pence || 0) * quantity;
+    }
 
     // ---- If event price is 0 or TBC, tickets are not on sale yet ----
-    if (amountPence === 0 || event.price_pence === 0) {
+    if (amountPence === 0 || (!isTable && event.price_pence === 0)) {
       return NextResponse.json(
         { error: 'Tickets for this event are not on sale yet. Bookings will open soon.' },
         { status: 400 }
@@ -220,12 +230,15 @@ export async function POST(req: Request) {
       currency: event.currency,
       customer: customerId,
       receipt_email: email,
-      description: `${event.title} — ${quantity} ticket${quantity === 1 ? '' : 's'}`,
+      description: isTable
+        ? `${event.title} — Table of 10 (${quantity} guests)`
+        : `${event.title} — ${quantity} ticket${quantity === 1 ? '' : 's'}`,
       automatic_payment_methods: { enabled: true },
       metadata: {
         booking_id: bookingId,
         event_id: event.id,
         event_slug: event.slug,
+        ticket_type: isTable ? 'table' : 'standard',
         attendee_name: name,
         attendee_email: email,
         attendee_phone: phone || '',

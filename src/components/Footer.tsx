@@ -150,7 +150,7 @@ export const Footer = () => {
               </p>
               <p>
                 <strong className="text-white font-medium block">Ticket Price:</strong>
-                TBC (Includes 3-Course Balti Meal &amp; Awards)
+                £49.99 per person / £450 Table of 10 (Includes 3-Course Balti Meal &amp; Awards)
               </p>
             </div>
           </div>

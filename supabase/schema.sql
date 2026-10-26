@@ -93,7 +93,7 @@ values
     'Quaid-E-Azam, Birmingham',
     '2026-12-09T18:30:00Z',
     '2026-12-09T21:30:00Z',
-    0, -- TBC (client pricing not set yet)
+    4999, -- £49.99 per person (Table of 10 for £450)
     '/images/chutney_chat_11th_anniversary_gala.png'
   ),
   (

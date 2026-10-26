@@ -121,3 +121,32 @@ button:focus, button:focus-visible {
 .animate-fadeIn {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Print Optimization for Admin Door Sheet & Tickets */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, button, select, input, .fixed {
+    display: none !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  th, td {
+    border: 1px solid #d1d5db !important;
+    color: #111827 !important;
+    padding: 6px 8px !important;
+  }
+  th {
+    background-color: #f3f4f6 !important;
+    color: #374151 !important;
+  }
+}

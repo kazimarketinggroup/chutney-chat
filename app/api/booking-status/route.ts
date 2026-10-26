@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    const BASE_COLUMNS = 'id, name, email, quantity, status, amount_pence, currency, event_id';
+    const BASE_COLUMNS = 'id, name, email, phone, company, role, quantity, guest_details, status, amount_pence, currency, event_id';
 
     // ticket_number is added by supabase/migration-ticket-numbers.sql. Select it
     // when present, but fall back cleanly if that migration has not been run —
@@ -115,7 +115,11 @@ export async function GET(req: Request) {
       status: booking.status,
       name: booking.name,
       email: booking.email,
+      phone: booking.phone || '',
+      company: booking.company || '',
+      role: booking.role || '',
       quantity: booking.quantity,
+      guestDetails: Array.isArray(booking.guest_details) ? booking.guest_details : [],
       total: formatPrice(booking.amount_pence, booking.currency),
       ticketNumber: booking.ticket_number || `CC-${booking.id.slice(0, 8).toUpperCase()}`,
       event: eventRow
