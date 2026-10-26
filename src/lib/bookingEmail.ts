@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { formatPrice, type BookingRow, type EventRow } from './supabase';
+import { generateServerTicketPDF } from './generateServerTicketPDF';
 
 /** Server-only: sends the attendee ticket and the internal notification. */
 
@@ -55,6 +56,12 @@ export function getTransporter() {
   return nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+}
+
 export interface SendEmailOptions {
   from?: string;
   to: string | string[];
@@ -63,6 +70,7 @@ export interface SendEmailOptions {
   html: string;
   text?: string;
   headers?: Record<string, string>;
+  attachments?: EmailAttachment[];
 }
 
 export async function sendEmail(opts: SendEmailOptions) {
@@ -81,6 +89,16 @@ export async function sendEmail(opts: SendEmailOptions) {
     if (opts.text) payload.text = opts.text;
     if (opts.replyTo) payload.reply_to = opts.replyTo;
     if (opts.headers) payload.headers = opts.headers;
+    if (opts.attachments && opts.attachments.length > 0) {
+      payload.attachments = opts.attachments.map((a) => ({
+        filename: a.filename,
+        content: Buffer.isBuffer(a.content)
+          ? a.content.toString('base64')
+          : typeof a.content === 'string'
+          ? (a.content.startsWith('JVBERi') ? a.content : Buffer.from(a.content).toString('base64'))
+          : a.content,
+      }));
+    }
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -112,6 +130,11 @@ export async function sendEmail(opts: SendEmailOptions) {
     html: opts.html,
     text: opts.text,
     headers: opts.headers,
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content as string, 'base64'),
+      contentType: a.contentType || 'application/pdf',
+    })),
   });
 }
 
@@ -214,15 +237,53 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
   const ticket = ticketNumber(booking);
   const calUrl = calendarUrl(event, ticket);
   const isMulti = booking.quantity > 1;
+  const isTable = booking.quantity >= 10 || booking.amount_pence === 45000;
 
-  const unitPrice = formatPrice(
-    Math.round(booking.amount_pence / Math.max(booking.quantity, 1)),
-    booking.currency
-  );
+  const unitPrice = isTable
+    ? '£450.00'
+    : formatPrice(
+        Math.round(booking.amount_pence / Math.max(booking.quantity, 1)),
+        booking.currency
+      );
 
-  const mailPromises: Promise<unknown>[] = [];
+  // Generate official PDF Event Pass with full attendee details
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = generateServerTicketPDF({
+      ticketNumber: ticket,
+      eventTitle,
+      venue,
+      date: day || 'TBC',
+      time: time || 'Evening',
+      total,
+      quantity: booking.quantity,
+      isTable,
+      primaryBuyer: {
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone || '',
+        company: booking.company || '',
+        role: booking.role || '',
+      },
+      guests: Array.isArray(booking.guest_details) ? booking.guest_details : [],
+    });
+  } catch (pdfErr) {
+    console.error('[bookingEmail] Failed to generate ticket PDF:', pdfErr);
+  }
 
-  // Primary Buyer Email (Receipt + Ticket)
+  const buyerAttachments = pdfBuffer
+    ? [
+        {
+          filename: `Ticket-${ticket}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ]
+    : undefined;
+
+  const mailJobs: Array<() => Promise<unknown>> = [];
+
+  // 1. Primary Buyer Email (Receipt + Ticket + PDF attachment)
   const attendeeHtml = buildTicketEmail({
     name: booking.name,
     eventTitle,
@@ -237,114 +298,134 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
     paidAt: formatPaidAt(booking.paid_at),
     paymentRef: booking.stripe_payment_intent_id,
     email: booking.email,
+    phone: booking.phone,
+    company: booking.company,
+    role: booking.role,
+    isTable,
+    guests: Array.isArray(booking.guest_details) ? booking.guest_details : [],
+    hasAttachment: !!pdfBuffer,
   });
 
-  mailPromises.push(
+  mailJobs.push(() =>
     sendEmail({
       from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
       to: booking.email,
-      subject: `Your ticket ${ticket} — ${eventTitle}`,
+      subject: `🎟️ Booking Confirmation: ${ticket} — ${eventTitle}`,
       html: attendeeHtml,
       text:
         `Your booking is confirmed.\n\n` +
-        `Ticket number: ${ticket}\n` +
+        `Ticket Reference: ${ticket}\n` +
         `Event: ${eventTitle}\n` +
         (day ? `Date: ${day}${time ? ', ' + time : ''}\n` : '') +
         `Venue: ${venue}\n` +
-        `Tickets: ${booking.quantity}\n\n` +
+        `Package: ${isTable ? 'Table of 10 Package (10 guests)' : booking.quantity + ' Ticket(s)'}\n\n` +
         `--- PAYMENT RECEIPT ---\n` +
         `${eventTitle}\n` +
-        `${unitPrice} x ${booking.quantity}\n` +
+        `${isTable ? 'Table of 10 Package' : unitPrice + ' x ' + booking.quantity}\n` +
         `Total paid: ${total}\n` +
         `Paid on: ${formatPaidAt(booking.paid_at)}\n` +
         `Payment method: Card - via Stripe\n` +
-        `Billed to: ${booking.email}\n` +
+        `Billed to: ${booking.name} <${booking.email}>\n` +
         (booking.stripe_payment_intent_id
           ? `Payment reference: ${booking.stripe_payment_intent_id}\n`
           : '') +
-        `\nPlease bring your ticket number with you${isMulti ? ' — it covers all ' + booking.quantity + ' guests' : ''}.\n\n` +
-        `Chutney & Chat`,
+        `\nYour official printable PDF ticket pass has been attached to this email. Please have your ticket reference ready on arrival.\n\n` +
+        `Chutney & Chat • https://chutneyandchat.co.uk`,
       headers: {
         'X-Priority': '1',
         'X-MSMail-Priority': 'High',
         'Importance': 'high',
       },
+      attachments: buyerAttachments,
     })
   );
 
-  // If there are specific guest recipient emails provided, dispatch individual guest E-Tickets
+  // 2. Individual guest E-Tickets (if distinct guest emails are provided)
   if (Array.isArray(booking.guest_details) && booking.guest_details.length > 1) {
     booking.guest_details.forEach((guest, index) => {
       // Guest 1 is primary buyer; skip if already sent
       if (index === 0) return;
 
-      const guestEmail = guest.email || booking.email;
-      // If guest email is distinct from primary buyer email, send dedicated E-Ticket
-      if (guestEmail && guestEmail.toLowerCase() !== booking.email.toLowerCase()) {
-        const guestTicketRef = `${ticket}-${index + 1}`;
-        const guestCalUrl = calendarUrl(event, guestTicketRef);
-        const guestHtml = buildTicketEmail({
-          name: guest.name || `Guest #${index + 1}`,
-          eventTitle,
-          venue,
-          day,
-          time,
-          ticket: guestTicketRef,
-          quantity: 1,
-          unitPrice,
-          total,
-          calUrl: guestCalUrl,
-          paidAt: formatPaidAt(booking.paid_at),
-          paymentRef: booking.stripe_payment_intent_id,
-          email: guestEmail,
-        });
-
-        mailPromises.push(
-          sendEmail({
-            from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
-            to: guestEmail,
-            subject: `🎟️ Your E-Ticket ${guestTicketRef} — ${eventTitle}`,
-            html: guestHtml,
-            text:
-              `Hi ${guest.name || 'Guest'},\n\n` +
-              `Your E-Ticket for ${eventTitle} is confirmed.\n\n` +
-              `Ticket Number: ${guestTicketRef}\n` +
-              `Venue: ${venue}\n` +
-              (day ? `Date: ${day}${time ? ', ' + time : ''}\n` : '') +
-              `Attendee: ${guest.name || 'Guest'}\n\n` +
-              `Please present this ticket number on entry at the door.\n\n` +
-              `Chutney & Chat`,
-            headers: {
-              'X-Priority': '1',
-              'X-MSMail-Priority': 'High',
-              'Importance': 'high',
-            },
-          })
-        );
+      const guestEmail = (guest.email || '').trim();
+      // Skip if invalid, empty, example.com, or identical to buyer
+      if (
+        !guestEmail ||
+        guestEmail.toLowerCase() === booking.email.toLowerCase() ||
+        guestEmail.endsWith('@example.com') ||
+        guestEmail.endsWith('@test.com') ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)
+      ) {
+        return;
       }
+
+      const guestTicketRef = `${ticket}-${index + 1}`;
+      const guestCalUrl = calendarUrl(event, guestTicketRef);
+      const guestHtml = buildTicketEmail({
+        name: guest.name || `Guest #${index + 1}`,
+        eventTitle,
+        venue,
+        day,
+        time,
+        ticket: guestTicketRef,
+        quantity: 1,
+        unitPrice,
+        total,
+        calUrl: guestCalUrl,
+        paidAt: formatPaidAt(booking.paid_at),
+        paymentRef: booking.stripe_payment_intent_id,
+        email: guestEmail,
+      });
+
+      mailJobs.push(() =>
+        sendEmail({
+          from: `"Chutney & Chat" <${SENDER_EMAIL}>`,
+          to: guestEmail,
+          subject: `🎟️ Your Event Pass: ${guestTicketRef} — ${eventTitle}`,
+          html: guestHtml,
+          text:
+            `Hi ${guest.name || 'Guest'},\n\n` +
+            `Your event pass for ${eventTitle} is confirmed.\n\n` +
+            `Ticket Reference: ${guestTicketRef}\n` +
+            `Venue: ${venue}\n` +
+            (day ? `Date: ${day}${time ? ', ' + time : ''}\n` : '') +
+            `Attendee: ${guest.name || 'Guest'}\n\n` +
+            `Please present this ticket reference on arrival at the door.\n\n` +
+            `Chutney & Chat`,
+          headers: {
+            'X-Priority': '1',
+            'X-MSMail-Priority': 'High',
+            'Importance': 'high',
+          },
+        })
+      );
     });
   }
 
-  // Admin Notification Email
+  // 3. Admin Notification Email
   const adminHtml = buildAdminEmail({ booking, eventTitle, venue, day, ticket, total });
-  mailPromises.push(
+  mailJobs.push(() =>
     sendEmail({
       from: `"Chutney & Chat Bookings" <${SENDER_EMAIL}>`,
       to: ADMIN_EMAIL,
       replyTo: booking.email,
-      subject: `New booking ${ticket} — ${booking.name} — ${eventTitle}`,
+      subject: `🔔 Paid Booking [${isTable ? 'Table of 10' : `${booking.quantity}x Ticket`}]: ${booking.name} — ${ticket}`,
       html: adminHtml,
+      attachments: buyerAttachments,
     })
   );
 
-  const results = await Promise.allSettled(mailPromises);
-  results.forEach((res, idx) => {
-    if (res.status === 'rejected') {
-      console.error(`[bookingEmail] Mail #${idx + 1} failed:`, res.reason);
-    } else {
-      console.log(`[bookingEmail] Mail #${idx + 1} sent successfully.`);
+  // Dispatch sequentially with safe 150ms delay to prevent rate limit (429) spikes
+  for (let i = 0; i < mailJobs.length; i++) {
+    try {
+      await mailJobs[i]();
+      console.log(`[bookingEmail] Mail #${i + 1}/${mailJobs.length} sent successfully.`);
+    } catch (err) {
+      console.error(`[bookingEmail] Mail #${i + 1}/${mailJobs.length} failed:`, err);
     }
-  });
+    if (i < mailJobs.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -354,8 +435,7 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
 /**
  * Table-based layout with inline styles throughout — Gmail, Outlook and Apple
  * Mail all strip <style> blocks and ignore flex/grid, so this is the only
- * markup that renders consistently. The perforated edge is drawn with a
- * dashed border rather than an image so it survives image-blocking.
+ * markup that renders consistently.
  */
 function buildTicketEmail(d: {
   name: string;
@@ -371,18 +451,25 @@ function buildTicketEmail(d: {
   paidAt: string;
   paymentRef: string | null;
   email: string;
+  phone?: string | null;
+  company?: string | null;
+  role?: string | null;
+  isTable?: boolean;
+  guests?: Array<{ name: string; email?: string; company?: string; role?: string }>;
+  hasAttachment?: boolean;
 }): string {
   const firstName = esc(d.name.split(' ')[0]);
-  const guests =
-    d.quantity > 1
-      ? `<div style="font-size:13px;color:${BRAND.muted};margin-top:6px;">Admits ${d.quantity} guests</div>`
-      : '';
+  const guestsBadge = d.isTable
+    ? `<div style="font-size:13px;color:#22A06B;font-weight:bold;margin-top:6px;">Table Package • Accommodates 10 Guests (Includes 3-Course Balti Meal)</div>`
+    : d.quantity > 1
+    ? `<div style="font-size:13px;color:${BRAND.muted};margin-top:6px;">Admits ${d.quantity} guests</div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background-color:#f4f2ef;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your ticket ${esc(d.ticket)} for ${esc(d.eventTitle)} — ${esc(d.venue)}</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your booking confirmation and official pass ${esc(d.ticket)} for ${esc(d.eventTitle)} — ${esc(d.venue)}</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f2ef;padding:28px 12px;">
     <tr><td align="center">
@@ -391,33 +478,54 @@ function buildTicketEmail(d: {
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,${BRAND.orangeLight} 0%,${BRAND.orange} 100%);padding:34px 30px;text-align:center;">
-            <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.85);margin-bottom:8px;">Chutney &amp; Chat</div>
-            <div style="font-size:27px;font-weight:bold;color:#ffffff;">You're booked in!</div>
+          <td style="background:linear-gradient(135deg,${BRAND.orangeLight} 0%,${BRAND.orange} 100%);padding:32px 30px;text-align:center;">
+            <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.85);margin-bottom:8px;font-weight:600;">Chutney &amp; Chat • Business Network</div>
+            <div style="font-size:26px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">Booking Confirmation</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:4px;">Official Event Pass &amp; Tax Receipt</div>
           </td>
         </tr>
 
         <!-- Intro -->
         <tr>
           <td style="padding:28px 30px 6px 30px;">
-            <p style="margin:0 0 8px 0;font-size:16px;color:${BRAND.ink};">Hi ${firstName},</p>
+            <p style="margin:0 0 8px 0;font-size:16px;color:${BRAND.ink};">Dear ${firstName},</p>
             <p style="margin:0;font-size:15px;line-height:1.6;color:${BRAND.body};">
-              Your payment went through and your place is confirmed. Here's your ticket — please have the number ready on the door.
+              Thank you for booking with Chutney &amp; Chat. Your order is confirmed and your place is secured for <strong>${esc(d.eventTitle)}</strong>. ${d.hasAttachment ? 'Your official printable PDF ticket pass is attached to this email.' : 'Please keep this confirmation for your records.'}
             </p>
           </td>
         </tr>
 
+        ${
+          d.hasAttachment
+            ? `<!-- Attachment Notification Banner -->
+        <tr>
+          <td style="padding:14px 30px 2px 30px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5FBF7;border:1px solid #C3E6D0;border-radius:10px;">
+              <tr>
+                <td style="padding:12px 16px;">
+                  <span style="font-size:16px;vertical-align:middle;">📎</span>
+                  <span style="font-size:13px;font-weight:600;color:#18734A;vertical-align:middle;margin-left:8px;">
+                    Official PDF Event Pass Attached — Includes full attendee roster &amp; check-in barcodes.
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+            : ''
+        }
+
         <!-- ── TICKET ── -->
         <tr>
-          <td style="padding:24px 30px 8px 30px;">
+          <td style="padding:20px 30px 8px 30px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.creamSoft};border:1px solid ${BRAND.line};border-radius:14px;overflow:hidden;">
 
               <!-- ticket number band -->
               <tr>
                 <td style="padding:24px 26px 20px 26px;text-align:center;background-color:${BRAND.cream};">
-                  <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};margin-bottom:10px;">Ticket Number</div>
+                  <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};margin-bottom:8px;font-weight:600;">Official Ticket Reference</div>
                   <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:30px;font-weight:bold;letter-spacing:2px;color:${BRAND.orange};">${esc(d.ticket)}</div>
-                  ${guests}
+                  ${guestsBadge}
                 </td>
               </tr>
 
@@ -431,13 +539,14 @@ function buildTicketEmail(d: {
               <!-- details -->
               <tr>
                 <td style="padding:22px 26px 24px 26px;">
-                  <div style="font-size:19px;font-weight:bold;color:${BRAND.ink};margin-bottom:18px;">${esc(d.eventTitle)}</div>
+                  <div style="font-size:18px;font-weight:bold;color:${BRAND.ink};margin-bottom:18px;">${esc(d.eventTitle)}</div>
 
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-                    ${row('Venue', esc(d.venue), true)}
+                    ${row('Venue / Location', esc(d.venue), true)}
                     ${d.day ? row('Date', esc(d.day)) : ''}
                     ${d.time ? row('Time', esc(d.time)) : ''}
-                    ${row('Admits', d.quantity === 1 ? '1 guest' : `${d.quantity} guests`)}
+                    ${row('Seating Package', d.isTable ? 'Reserved Table of 10 (10 guests)' : d.quantity === 1 ? '1 Standard Ticket' : `${d.quantity} Standard Tickets`)}
+                    ${row('Meal Included', '3-Course Balti Meal (Served during evening)')}
                   </table>
                 </td>
               </tr>
@@ -446,17 +555,49 @@ function buildTicketEmail(d: {
         </tr>
 
         ${
+          d.guests && d.guests.length > 0
+            ? `<!-- ── ATTENDEES ROSTER ── -->
+        <tr>
+          <td style="padding:16px 30px 8px 30px;">
+            <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};margin-bottom:10px;font-weight:bold;">
+              Table Attendees &amp; Guest Passes (${d.guests.length} Registered)
+            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.creamSoft};border:1px solid ${BRAND.line};border-radius:10px;overflow:hidden;font-size:13px;">
+              <tr style="background-color:${BRAND.cream};font-size:11px;font-weight:bold;color:#73685e;text-transform:uppercase;">
+                <td style="padding:8px 12px;width:24px;">#</td>
+                <td style="padding:8px 12px;">Attendee Name</td>
+                <td style="padding:8px 12px;">Email Address</td>
+                <td style="padding:8px 12px;">Company / Role</td>
+              </tr>
+              ${d.guests
+                .map(
+                  (g, idx) => `
+                <tr style="border-top:1px solid ${BRAND.line};">
+                  <td style="padding:8px 12px;color:${BRAND.muted};font-size:11px;">${idx + 1}</td>
+                  <td style="padding:8px 12px;font-weight:bold;color:${BRAND.ink};">${esc(g.name || (idx === 0 ? d.name : 'Guest #' + (idx + 1)))}</td>
+                  <td style="padding:8px 12px;color:${BRAND.body};font-size:12px;">${esc(g.email || (idx === 0 ? d.email : '—'))}</td>
+                  <td style="padding:8px 12px;color:${BRAND.muted};font-size:12px;">${esc([g.company, g.role].filter(Boolean).join(' • ') || (idx === 0 ? [d.company, d.role].filter(Boolean).join(' • ') : '—'))}</td>
+                </tr>`
+                )
+                .join('')}
+            </table>
+          </td>
+        </tr>`
+            : ''
+        }
+
+        ${
           d.calUrl
             ? `<tr><td style="padding:14px 30px 4px 30px;text-align:center;">
-                 <a href="${d.calUrl}" style="display:inline-block;padding:13px 30px;background-color:${BRAND.orange};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:bold;">Add to calendar</a>
+                 <a href="${d.calUrl}" style="display:inline-block;padding:12px 28px;background-color:${BRAND.orange};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:bold;">Add to Google Calendar</a>
                </td></tr>`
             : ''
         }
 
         <!-- ── PAYMENT SLIP ── -->
         <tr>
-          <td style="padding:26px 30px 6px 30px;">
-            <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};margin-bottom:12px;">Payment Receipt</div>
+          <td style="padding:22px 30px 6px 30px;">
+            <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};margin-bottom:12px;font-weight:600;">Tax Invoice &amp; Payment Receipt</div>
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececec;border-radius:12px;">
 
@@ -466,10 +607,10 @@ function buildTicketEmail(d: {
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
                     <tr>
                       <td style="padding:0 0 10px 0;color:${BRAND.body};">
-                        ${esc(d.eventTitle)}<br>
-                        <span style="font-size:12px;color:${BRAND.muted};">${esc(d.unitPrice)} × ${d.quantity}</span>
+                        <strong>${esc(d.eventTitle)}</strong><br>
+                        <span style="font-size:12px;color:${BRAND.muted};">${d.isTable ? 'Table of 10 Package (10 Seats)' : `${esc(d.unitPrice)} × ${d.quantity} Ticket(s)`}</span>
                       </td>
-                      <td style="padding:0 0 10px 0;text-align:right;color:${BRAND.ink};white-space:nowrap;">${esc(d.total)}</td>
+                      <td style="padding:0 0 10px 0;text-align:right;color:${BRAND.ink};font-weight:bold;white-space:nowrap;">${esc(d.total)}</td>
                     </tr>
                   </table>
                 </td>
@@ -485,7 +626,7 @@ function buildTicketEmail(d: {
                 <td style="padding:14px 22px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="font-size:15px;font-weight:bold;color:${BRAND.ink};">Total paid</td>
+                      <td style="font-size:15px;font-weight:bold;color:${BRAND.ink};">Total Paid</td>
                       <td style="font-size:19px;font-weight:bold;color:${BRAND.orange};text-align:right;white-space:nowrap;">${esc(d.total)}</td>
                     </tr>
                   </table>
@@ -498,10 +639,12 @@ function buildTicketEmail(d: {
                   <div style="border-top:1px solid #ececec;padding-top:14px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;color:${BRAND.muted};">
                       ${slipRow('Paid on', esc(d.paidAt))}
-                      ${slipRow('Payment method', 'Card — via Stripe')}
-                      ${slipRow('Billed to', esc(d.email))}
-                      ${d.paymentRef ? slipRow('Payment reference', esc(d.paymentRef)) : ''}
-                      ${slipRow('Ticket number', esc(d.ticket))}
+                      ${slipRow('Payment method', 'Credit / Debit Card (via Stripe)')}
+                      ${slipRow('Cardholder / Billed to', `${esc(d.name)} &lt;${esc(d.email)}&gt;`)}
+                      ${d.phone ? slipRow('Phone', esc(d.phone)) : ''}
+                      ${d.company ? slipRow('Organisation', esc(d.company)) : ''}
+                      ${d.paymentRef ? slipRow('Stripe payment ID', esc(d.paymentRef)) : ''}
+                      ${slipRow('Ticket reference', esc(d.ticket))}
                     </table>
                   </div>
                 </td>
@@ -515,7 +658,7 @@ function buildTicketEmail(d: {
           <td style="padding:22px 30px 28px 30px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.creamSoft};border-left:3px solid ${BRAND.orange};border-radius:6px;">
               <tr><td style="padding:14px 18px;font-size:13px;line-height:1.6;color:${BRAND.body};">
-                Keep this email — your ticket number is your entry. If anything changes, just reply and we'll sort it.
+                Please retain this confirmation and the attached PDF ticket pass. You may present either the digital PDF or printed pass at the reception desk on arrival.
               </td></tr>
             </table>
           </td>
@@ -525,7 +668,7 @@ function buildTicketEmail(d: {
         <tr>
           <td style="background-color:#0A0B0E;padding:24px 30px;text-align:center;">
             <div style="font-size:14px;font-weight:bold;color:#ffffff;margin-bottom:6px;">Chutney &amp; Chat</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.55);">Informal &nbsp;|&nbsp; Educational &nbsp;|&nbsp; Connection</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.55);">Connecting Entrepreneurs &amp; Business Leaders Across the UK • https://chutneyandchat.co.uk</div>
           </td>
         </tr>
 
@@ -560,6 +703,7 @@ function buildAdminEmail(d: {
   total: string;
 }): string {
   const b = d.booking;
+  const isTable = b.quantity >= 10 || b.amount_pence === 45000;
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background-color:#f4f2ef;">
@@ -568,14 +712,15 @@ function buildAdminEmail(d: {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
 
         <tr><td style="background:linear-gradient(135deg,#444 0%,#121212 100%);padding:24px 26px;">
-          <div style="font-size:20px;font-weight:bold;color:#ffffff;">New Paid Booking</div>
+          <div style="font-size:20px;font-weight:bold;color:#ffffff;">New Paid Booking ${isTable ? '(Table of 10)' : ''}</div>
           <div style="font-size:13px;color:rgba(255,255,255,0.65);margin-top:4px;">${esc(d.eventTitle)}</div>
         </td></tr>
 
         <tr><td style="padding:22px 26px;">
           <div style="background-color:${BRAND.creamSoft};border:1px solid ${BRAND.line};border-radius:10px;padding:14px 18px;margin-bottom:20px;text-align:center;">
-            <span style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:${BRAND.muted};">Ticket</span><br>
+            <span style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:${BRAND.muted};">Ticket Reference</span><br>
             <span style="font-family:Menlo,Consolas,monospace;font-size:22px;font-weight:bold;color:${BRAND.orange};">${esc(d.ticket)}</span>
+            <div style="font-size:12px;color:#22A06B;margin-top:4px;font-weight:bold;">📎 PDF Ticket Pass Attached</div>
           </div>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
@@ -586,19 +731,19 @@ function buildAdminEmail(d: {
             ${row('Role', esc(b.role) || '—')}
             ${row('Venue', esc(d.venue))}
             ${d.day ? row('Date', esc(d.day)) : ''}
-            ${row('Tickets', String(b.quantity))}
+            ${row('Package / Tickets', isTable ? 'Table of 10 Package (10 seats)' : `${b.quantity} ticket(s)`)}
             ${
               Array.isArray(b.guest_details) && b.guest_details.length > 0
                 ? row(
-                    'Guests Breakdown',
+                    `Attendees Breakdown (${b.guest_details.length})`,
                     b.guest_details
-                      .map((g, i) => `${i + 1}. ${esc(g.name)}${g.email ? ' (' + esc(g.email) + ')' : ''}`)
+                      .map((g, i) => `${i + 1}. <strong>${esc(g.name)}</strong> — ${esc(g.email || 'No email')}${g.company || g.role ? ' (' + esc([g.company, g.role].filter(Boolean).join(' / ')) + ')' : ''}`)
                       .join('<br>')
                   )
                 : ''
             }
-            ${row('Amount', esc(d.total), true)}
-            ${row('Payment ref', esc(b.stripe_payment_intent_id) || '—')}
+            ${row('Amount Paid', esc(d.total), true)}
+            ${row('Payment Ref', esc(b.stripe_payment_intent_id) || '—')}
           </table>
         </td></tr>
 

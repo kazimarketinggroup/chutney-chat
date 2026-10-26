@@ -206,10 +206,16 @@ export function UpcomingEventsSection() {
                     <>
                       <button
                         type="button"
-                        disabled
-                        className="flex-1 inline-flex items-center justify-center h-[42px] sm:h-[44px] rounded-[10px] sm:rounded-[12px] bg-[#E8DDD2] text-[#8C7E72] font-bold text-xs sm:text-sm cursor-not-allowed"
+                        onClick={() =>
+                          openModal({
+                            title: `Wednesday 9th December 2026 - ${evt.title}`,
+                            price: '£49.99',
+                            eventSlug: evt.slug,
+                          })
+                        }
+                        className="flex-1 inline-flex items-center justify-center h-[42px] sm:h-[44px] rounded-[10px] sm:rounded-[12px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-xs sm:text-sm transition-all shadow-[0_4px_14px_rgba(255,102,0,0.25)] hover:scale-[1.02] cursor-pointer"
                       >
-                        Tickets Opening Soon
+                        Buy Tickets
                       </button>
                       {evt.calendarData && (
                         <AddToCalendarButton

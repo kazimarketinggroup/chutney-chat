@@ -77,15 +77,21 @@ export async function POST(req: Request) {
       guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
     } else {
       const guestObj = rawGuests[i];
-      // If guest name is provided, use it. Otherwise, default gracefully to "Guest #[n] (Booked by [name])"
-      const gName = clean(guestObj?.name, 120) || `Guest #${i + 1} (${name})`;
-      const gEmail = clean(guestObj?.email, 200).toLowerCase() || email;
+      const gName = clean(guestObj?.name, 120);
+      const gEmail = clean(guestObj?.email, 200).toLowerCase();
       const gCompany = clean(guestObj?.company, 160) || company;
-      const gRole = clean(guestObj?.role, 160);
+      const gRole = clean(guestObj?.role, 160) || role || 'Guest Pass';
 
-      if (gEmail && !EMAIL_RE.test(gEmail)) {
+      if (!gName) {
         return NextResponse.json(
-          { error: `Please provide a valid email address for Guest #${i + 1}.` },
+          { error: `Please provide the full name for Guest #${i + 1}. All attendee details are mandatory.` },
+          { status: 400 }
+        );
+      }
+
+      if (!gEmail || !EMAIL_RE.test(gEmail)) {
+        return NextResponse.json(
+          { error: `Please provide a valid email address for Guest #${i + 1}. All attendee details are mandatory.` },
           { status: 400 }
         );
       }

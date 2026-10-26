@@ -199,8 +199,9 @@ export function TicketModal() {
 
   // Safe pricing calculation for real-time order summary display
   const isTBC = useMemo(() => {
+    if (eventDetails.eventSlug === 'annual-dinner-awards') return false;
     return eventDetails.price.toUpperCase().includes('TBC');
-  }, [eventDetails.price]);
+  }, [eventDetails.price, eventDetails.eventSlug]);
 
   const isTableBooking = bookingType === 'table';
 
@@ -249,6 +250,32 @@ export function TicketModal() {
     if (isTBC) {
       setError('Tickets for this event are not on sale yet. Bookings will open soon.');
       return;
+    }
+
+    // Validate primary lead attendee
+    if (!formData.name.trim()) {
+      setError('Please provide your full name.');
+      return;
+    }
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      setError('Please provide a valid email address.');
+      return;
+    }
+
+    // Validate extra guests: mandatory info required for each ticket
+    if (formData.quantity > 1) {
+      for (let i = 1; i < formData.quantity; i++) {
+        const guestName = (guests[i]?.name || '').trim();
+        const guestEmail = (guests[i]?.email || '').trim();
+        if (!guestName) {
+          setError(`Please provide the full name for Guest #${i + 1}. All attendee details are mandatory.`);
+          return;
+        }
+        if (!guestEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+          setError(`Please provide a valid email address for Guest #${i + 1}. All attendee details are mandatory.`);
+          return;
+        }
+      }
     }
 
     setSubmitting(true);
@@ -863,11 +890,13 @@ export function TicketModal() {
                               <div className="flex items-center gap-1.5">
                                 <Users className="w-3.5 h-3.5 text-[#FF6600]" />
                                 <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
-                                  Additional Guest Passes ({formData.quantity - 1})
+                                  {bookingType === 'table'
+                                    ? `Table Guests (${formData.quantity - 1} remaining seats)`
+                                    : `Additional Guest Passes (${formData.quantity - 1})`}
                                 </h3>
                               </div>
-                              <span className="text-[10px] text-[#8C7E72]">
-                                Optional • Guest names default automatically
+                              <span className="text-[10px] font-bold text-[#EE6422] uppercase tracking-wider">
+                                Mandatory • Guest details required
                               </span>
                             </div>
 
@@ -890,28 +919,30 @@ export function TicketModal() {
                                           Guest #{guestIndex + 1}
                                         </span>
                                         <span className="text-[11px] font-semibold text-[#403934]">
-                                          Attendee Details
+                                          Attendee Details (Mandatory)
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-mono text-[#8C7E72]">
                                           Ticket #{guestIndex + 1}
                                         </span>
-                                        <button
-                                          type="button"
-                                          disabled={submitting}
-                                          onClick={() => {
-                                            setFormData((prev) => ({
-                                              ...prev,
-                                              quantity: Math.max(1, prev.quantity - 1),
-                                            }));
-                                            setGuests((prev) => prev.filter((_, i) => i !== guestIndex));
-                                          }}
-                                          title="Remove this guest pass"
-                                          className="p-1 rounded text-[#8C7E72] hover:text-[#D32F2F] hover:bg-[#FDECEC] transition-colors cursor-pointer"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
+                                        {bookingType !== 'table' && (
+                                          <button
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => {
+                                              setFormData((prev) => ({
+                                                ...prev,
+                                                quantity: Math.max(1, prev.quantity - 1),
+                                              }));
+                                              setGuests((prev) => prev.filter((_, i) => i !== guestIndex));
+                                            }}
+                                            title="Remove this guest pass"
+                                            className="p-1 rounded text-[#8C7E72] hover:text-[#D32F2F] hover:bg-[#FDECEC] transition-colors cursor-pointer"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
 
@@ -921,13 +952,14 @@ export function TicketModal() {
                                           htmlFor={`guest-name-${guestIndex}`}
                                           className="block text-[10px] font-semibold text-[#403934] mb-0.5"
                                         >
-                                          Guest Name <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                                          Guest Name <span className="text-[#EE6422] font-bold">*</span>
                                         </label>
                                         <input
                                           id={`guest-name-${guestIndex}`}
                                           type="text"
+                                          required
                                           disabled={submitting}
-                                          placeholder={`Guest #${guestIndex + 1} Name`}
+                                          placeholder={`Guest #${guestIndex + 1} Full Name`}
                                           value={currentGuest.name}
                                           onChange={(e) =>
                                             handleGuestChange(guestIndex, 'name', e.target.value)
@@ -941,13 +973,14 @@ export function TicketModal() {
                                           htmlFor={`guest-email-${guestIndex}`}
                                           className="block text-[10px] font-semibold text-[#403934] mb-0.5"
                                         >
-                                          Guest Email <span className="text-[#8C7E72] font-normal">(Optional)</span>
+                                          Guest Email <span className="text-[#EE6422] font-bold">*</span>
                                         </label>
                                         <input
                                           id={`guest-email-${guestIndex}`}
                                           type="email"
+                                          required
                                           disabled={submitting}
-                                          placeholder="Direct ticket delivery"
+                                          placeholder="Direct ticket delivery email"
                                           value={currentGuest.email}
                                           onChange={(e) =>
                                             handleGuestChange(guestIndex, 'email', e.target.value)
@@ -980,26 +1013,28 @@ export function TicketModal() {
                                 );
                               })}
 
-                              {/* Plus button to add more attendees */}
-                              <button
-                                type="button"
-                                disabled={submitting || formData.quantity >= 100}
-                                onClick={() => {
-                                  if (!isCustomQuantity && formData.quantity >= 10) {
-                                    setIsCustomQuantity(true);
-                                  }
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    quantity: Math.min(100, prev.quantity + 1),
-                                  }));
-                                }}
-                                className="w-full py-2.5 px-3 rounded-[12px] border-2 border-dashed border-[#F5D8C0] hover:border-[#FF6600] bg-[#FFFBF8] hover:bg-[#FFF5EB] text-[#FF6600] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer group active:scale-[0.99]"
-                              >
-                                <div className="w-5 h-5 rounded-full bg-[#FFE8D6] group-hover:bg-[#FF6600] group-hover:text-white flex items-center justify-center transition-colors">
-                                  <Plus className="w-3.5 h-3.5" />
-                                </div>
-                                <span>Add Another Guest / Ticket (+{currencySymbol}{unitPrice.toFixed(0)})</span>
-                              </button>
+                              {/* Plus button to add more attendees (individual bookings only) */}
+                              {bookingType !== 'table' && (
+                                <button
+                                  type="button"
+                                  disabled={submitting || formData.quantity >= 100}
+                                  onClick={() => {
+                                    if (!isCustomQuantity && formData.quantity >= 10) {
+                                      setIsCustomQuantity(true);
+                                    }
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      quantity: Math.min(100, prev.quantity + 1),
+                                    }));
+                                  }}
+                                  className="w-full py-2.5 px-3 rounded-[12px] border-2 border-dashed border-[#F5D8C0] hover:border-[#FF6600] bg-[#FFFBF8] hover:bg-[#FFF5EB] text-[#FF6600] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer group active:scale-[0.99]"
+                                >
+                                  <div className="w-5 h-5 rounded-full bg-[#FFE8D6] group-hover:bg-[#FF6600] group-hover:text-white flex items-center justify-center transition-colors">
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span>Add Another Guest / Ticket (+{currencySymbol}{unitPrice.toFixed(0)})</span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
