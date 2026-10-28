@@ -236,8 +236,10 @@ export async function sendBookingEmails(booking: BookingRow, event: EventRow | n
   const total = formatPrice(booking.amount_pence, booking.currency);
   const ticket = ticketNumber(booking);
   const calUrl = calendarUrl(event, ticket);
-  const isMulti = booking.quantity > 1;
-  const isTable = booking.quantity >= 10 || booking.amount_pence === 45000;
+  const isTable =
+    booking.quantity >= 10 ||
+    booking.amount_pence === 45000 ||
+    (booking.amount_pence > 0 && booking.amount_pence % 45000 === 0);
 
   const unitPrice = isTable
     ? '£450.00'
@@ -703,7 +705,10 @@ function buildAdminEmail(d: {
   total: string;
 }): string {
   const b = d.booking;
-  const isTable = b.quantity >= 10 || b.amount_pence === 45000;
+  const isTable =
+    b.quantity >= 10 ||
+    b.amount_pence === 45000 ||
+    (b.amount_pence > 0 && b.amount_pence % 45000 === 0);
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background-color:#f4f2ef;">

@@ -18,6 +18,7 @@ interface GuestInput {
 interface CheckoutBody {
   eventSlug?: string;
   ticketType?: 'individual' | 'standard' | 'table';
+  tableCount?: number;
   name?: string;
   email?: string;
   phone?: string;
@@ -49,7 +50,13 @@ export async function POST(req: Request) {
   const company = clean(body.company, 160);
   const role = clean(body.role, 160);
 
-  const quantity = Number.isInteger(body.quantity) ? Number(body.quantity) : 1;
+  const isTable = body.ticketType === 'table';
+  const tableCount = isTable
+    ? Math.max(1, Number(body.tableCount) || Math.floor((Number(body.quantity) || 10) / 10) || 1)
+    : 1;
+  const quantity = isTable
+    ? tableCount * 10
+    : (Number.isInteger(body.quantity) ? Number(body.quantity) : 1);
 
   if (!eventSlug) return NextResponse.json({ error: 'Event is required.' }, { status: 400 });
   if (!name) return NextResponse.json({ error: 'Name is required.' }, { status: 400 });
@@ -67,36 +74,72 @@ export async function POST(req: Request) {
   const guestDetails: Array<{ name: string; email: string; company?: string; role?: string }> = [];
   const rawGuests = Array.isArray(body.guests) ? body.guests : [];
 
-  for (let i = 0; i < quantity; i++) {
-    if (i === 0) {
-      // Primary guest
-      const gName = clean(rawGuests[0]?.name, 120) || name;
-      const gEmail = clean(rawGuests[0]?.email, 200).toLowerCase() || email;
-      const gCompany = clean(rawGuests[0]?.company, 160) || company;
-      const gRole = clean(rawGuests[0]?.role, 160) || role;
-      guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
-    } else {
+  if (isTable) {
+    // For Table of 10 bookings:
+    // - Primary guest is always at index 0 (or fallback to lead name/email)
+    // - Buyer can delete unassigned guest slots, so only validate guests that were actually retained
+    const g0Name = clean(rawGuests[0]?.name, 120) || name;
+    const g0Email = clean(rawGuests[0]?.email, 200).toLowerCase() || email;
+    const g0Company = clean(rawGuests[0]?.company, 160) || company;
+    const g0Role = clean(rawGuests[0]?.role, 160) || role;
+    guestDetails.push({ name: g0Name, email: g0Email, company: g0Company, role: g0Role });
+
+    for (let i = 1; i < rawGuests.length; i++) {
       const guestObj = rawGuests[i];
       const gName = clean(guestObj?.name, 120);
       const gEmail = clean(guestObj?.email, 200).toLowerCase();
       const gCompany = clean(guestObj?.company, 160) || company;
-      const gRole = clean(guestObj?.role, 160) || role || 'Guest Pass';
+      const gRole = clean(guestObj?.role, 160) || role || 'Table Guest';
 
       if (!gName) {
         return NextResponse.json(
-          { error: `Please provide the full name for Guest #${i + 1}. All attendee details are mandatory.` },
+          { error: `Please provide the full name for Guest #${i + 1}.` },
           { status: 400 }
         );
       }
 
       if (!gEmail || !EMAIL_RE.test(gEmail)) {
         return NextResponse.json(
-          { error: `Please provide a valid email address for Guest #${i + 1}. All attendee details are mandatory.` },
+          { error: `Please provide a valid email address for Guest #${i + 1}.` },
           { status: 400 }
         );
       }
 
       guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
+    }
+  } else {
+    // Individual ticket bookings: validate every purchased ticket
+    for (let i = 0; i < quantity; i++) {
+      if (i === 0) {
+        // Primary guest
+        const gName = clean(rawGuests[0]?.name, 120) || name;
+        const gEmail = clean(rawGuests[0]?.email, 200).toLowerCase() || email;
+        const gCompany = clean(rawGuests[0]?.company, 160) || company;
+        const gRole = clean(rawGuests[0]?.role, 160) || role;
+        guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
+      } else {
+        const guestObj = rawGuests[i];
+        const gName = clean(guestObj?.name, 120);
+        const gEmail = clean(guestObj?.email, 200).toLowerCase();
+        const gCompany = clean(guestObj?.company, 160) || company;
+        const gRole = clean(guestObj?.role, 160) || role || 'Guest Pass';
+
+        if (!gName) {
+          return NextResponse.json(
+            { error: `Please provide the full name for Guest #${i + 1}. All attendee details are mandatory.` },
+            { status: 400 }
+          );
+        }
+
+        if (!gEmail || !EMAIL_RE.test(gEmail)) {
+          return NextResponse.json(
+            { error: `Please provide a valid email address for Guest #${i + 1}. All attendee details are mandatory.` },
+            { status: 400 }
+          );
+        }
+
+        guestDetails.push({ name: gName, email: gEmail, company: gCompany, role: gRole });
+      }
     }
   }
 
@@ -132,12 +175,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const isTable = body.ticketType === 'table';
     let amountPence: number;
 
     if (isTable) {
-      // Table accommodating 10 people for £450 (45,000 pence)
-      const tableCount = Math.max(1, Math.floor(quantity / 10));
+      // Table accommodating 10 people for £450 (45,000 pence per table)
       amountPence = 45000 * tableCount;
     } else {
       amountPence = (event.price_pence || 0) * quantity;
@@ -237,7 +278,7 @@ export async function POST(req: Request) {
       customer: customerId,
       receipt_email: email,
       description: isTable
-        ? `${event.title} — Table of 10 (${quantity} guests)`
+        ? `${event.title} — Table of 10 (${tableCount > 1 ? `${tableCount} tables • ` : ''}${guestDetails.length} assigned / ${quantity} seats)`
         : `${event.title} — ${quantity} ticket${quantity === 1 ? '' : 's'}`,
       automatic_payment_methods: { enabled: true },
       metadata: {

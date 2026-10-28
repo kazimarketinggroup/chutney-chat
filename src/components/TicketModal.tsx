@@ -113,6 +113,7 @@ interface PaymentSession {
 }
 
 interface GuestState {
+  id?: string;
   name: string;
   email: string;
   company: string;
@@ -127,6 +128,7 @@ export function TicketModal() {
   const [step, setStep] = useState<Step>('details');
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [bookingType, setBookingType] = useState<'individual' | 'table'>('individual');
+  const [tableCount, setTableCount] = useState(1);
   const [guests, setGuests] = useState<GuestState[]>([]);
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -139,25 +141,62 @@ export function TicketModal() {
   // Sync guests array when quantity or primary buyer changes
   useEffect(() => {
     setGuests((prev) => {
-      const targetLength = formData.quantity;
-      const next: GuestState[] = [];
-      for (let i = 0; i < targetLength; i++) {
-        if (i === 0) {
-          next.push({
-            name: formData.name,
-            email: formData.email,
-            company: formData.company,
-            role: formData.role,
-          });
-        } else if (prev[i]) {
-          next.push(prev[i]);
-        } else {
-          next.push({ name: '', email: '', company: '', role: '' });
+      if (bookingType === 'table') {
+        // Table of 10 booking: preserve existing guest cards (including deleted/added slots)
+        // If empty, initialize up to table capacity (tableCount * 10)
+        const targetLength = prev.length > 0 ? prev.length : tableCount * 10;
+        const next: GuestState[] = [];
+        for (let i = 0; i < targetLength; i++) {
+          if (i === 0) {
+            next.push({
+              id: prev[0]?.id || 'primary',
+              name: formData.name,
+              email: formData.email,
+              company: formData.company,
+              role: formData.role,
+            });
+          } else if (prev[i]) {
+            next.push(prev[i]);
+          } else {
+            next.push({
+              id: Math.random().toString(36).slice(2, 9),
+              name: '',
+              email: '',
+              company: '',
+              role: '',
+            });
+          }
         }
+        return next;
+      } else {
+        // Individual ticket bookings: sync strictly to formData.quantity
+        const targetLength = formData.quantity;
+        const next: GuestState[] = [];
+        for (let i = 0; i < targetLength; i++) {
+          if (i === 0) {
+            next.push({
+              id: prev[0]?.id || 'primary',
+              name: formData.name,
+              email: formData.email,
+              company: formData.company,
+              role: formData.role,
+            });
+          } else if (prev[i]) {
+            next.push(prev[i]);
+          } else {
+            next.push({
+              id: Math.random().toString(36).slice(2, 9),
+              name: '',
+              email: '',
+              company: '',
+              role: '',
+            });
+          }
+        }
+        return next;
       }
-      return next;
     });
-  }, [formData.quantity, formData.name, formData.email, formData.company, formData.role]);
+  }, [bookingType, tableCount, formData.quantity, formData.name, formData.email, formData.company, formData.role]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -177,10 +216,25 @@ export function TicketModal() {
     });
   };
 
+  const handleRemoveGuest = (indexToRemove: number) => {
+    if (bookingType === 'table') {
+      // For Table of 10: remove the guest slot without changing the £450 table package price
+      setGuests((prev) => prev.filter((_, i) => i !== indexToRemove));
+    } else {
+      // Individual ticket: decrement quantity and reduce price
+      setFormData((prev) => ({
+        ...prev,
+        quantity: Math.max(1, prev.quantity - 1),
+      }));
+      setGuests((prev) => prev.filter((_, i) => i !== indexToRemove));
+    }
+  };
+
   const resetAll = () => {
     setStep('details');
     setFormData(EMPTY_FORM);
     setBookingType('individual');
+    setTableCount(1);
     setGuests([]);
     setIsCustomQuantity(false);
     setSession(null);
@@ -219,11 +273,10 @@ export function TicketModal() {
   const calculatedSubtotal = useMemo(() => {
     if (isTBC) return 'TBC';
     if (isTableBooking) {
-      const tableCount = Math.max(1, Math.floor(formData.quantity / 10));
       return (450 * tableCount).toFixed(2);
     }
     return (unitPrice * formData.quantity).toFixed(2);
-  }, [unitPrice, formData.quantity, isTBC, isTableBooking]);
+  }, [unitPrice, formData.quantity, isTBC, isTableBooking, tableCount]);
 
   // Parse title into date and venue if separated by hyphen for premium badges
   const parsedEvent = useMemo(() => {
@@ -262,17 +315,29 @@ export function TicketModal() {
       return;
     }
 
-    // Validate extra guests: mandatory info required for each ticket
-    if (formData.quantity > 1) {
-      for (let i = 1; i < formData.quantity; i++) {
-        const guestName = (guests[i]?.name || '').trim();
-        const guestEmail = (guests[i]?.email || '').trim();
+    // Validate extra guests:
+    // For table bookings: validate all retained guest cards (unassigned slots can be removed)
+    // For individual tickets: validate 1..quantity
+    const guestListToValidate = bookingType === 'table' ? guests.slice(1) : guests.slice(1, formData.quantity);
+    if (guestListToValidate.length > 0) {
+      for (let i = 0; i < guestListToValidate.length; i++) {
+        const guestIndex = i + 1;
+        const guestName = (guestListToValidate[i]?.name || '').trim();
+        const guestEmail = (guestListToValidate[i]?.email || '').trim();
         if (!guestName) {
-          setError(`Please provide the full name for Guest #${i + 1}. All attendee details are mandatory.`);
+          setError(
+            bookingType === 'table'
+              ? `Please provide the full name for Guest #${guestIndex + 1}, or remove this guest seat.`
+              : `Please provide the full name for Guest #${guestIndex + 1}. All attendee details are mandatory.`
+          );
           return;
         }
         if (!guestEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
-          setError(`Please provide a valid email address for Guest #${i + 1}. All attendee details are mandatory.`);
+          setError(
+            bookingType === 'table'
+              ? `Please provide a valid email address for Guest #${guestIndex + 1}, or remove this guest seat.`
+              : `Please provide a valid email address for Guest #${guestIndex + 1}. All attendee details are mandatory.`
+          );
           return;
         }
       }
@@ -288,12 +353,13 @@ export function TicketModal() {
         body: JSON.stringify({
           eventSlug: eventDetails.eventSlug,
           ticketType: bookingType,
+          tableCount: bookingType === 'table' ? tableCount : undefined,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           company: formData.company,
           role: formData.role,
-          quantity: formData.quantity,
+          quantity: bookingType === 'table' ? tableCount * 10 : formData.quantity,
           guests,
         }),
       });
@@ -506,8 +572,32 @@ export function TicketModal() {
                             disabled={submitting}
                             onClick={() => {
                               setBookingType('table');
+                              setTableCount(1);
                               setFormData((prev) => ({ ...prev, quantity: 10 }));
                               setIsCustomQuantity(false);
+                              setGuests((prev) => {
+                                const list: GuestState[] = [
+                                  {
+                                    id: prev[0]?.id || 'primary',
+                                    name: formData.name,
+                                    email: formData.email,
+                                    company: formData.company,
+                                    role: formData.role,
+                                  },
+                                ];
+                                for (let i = 1; i < 10; i++) {
+                                  list.push(
+                                    prev[i] || {
+                                      id: Math.random().toString(36).slice(2, 9),
+                                      name: '',
+                                      email: '',
+                                      company: '',
+                                      role: '',
+                                    }
+                                  );
+                                }
+                                return list;
+                              });
                             }}
                             className={`p-2.5 sm:p-3 rounded-[12px] border text-left transition-all cursor-pointer relative overflow-hidden ${
                               bookingType === 'table'
@@ -535,10 +625,10 @@ export function TicketModal() {
                               </div>
                               <div>
                                 <div className="text-xs sm:text-sm font-bold text-[#1F1F1F] leading-tight">
-                                  Table Package • 10 Guests Accommodated
+                                  Table Package • {tableCount * 10} Guests Accommodated
                                 </div>
                                 <div className="text-[10px] sm:text-[11px] text-[#73685E]">
-                                  £450 per table (Includes 3-Course meal for all 10 attendees)
+                                  £450 per table (Includes 3-Course meal for all {tableCount * 10} attendees)
                                 </div>
                               </div>
                             </div>
@@ -548,18 +638,34 @@ export function TicketModal() {
                                 <select
                                   id="modal-table-quantity"
                                   disabled={submitting}
-                                  value={formData.quantity}
+                                  value={tableCount}
                                   onChange={(e) => {
+                                    const newCount = Number(e.target.value);
+                                    setTableCount(newCount);
                                     setFormData((prev) => ({
                                       ...prev,
-                                      quantity: Number(e.target.value),
+                                      quantity: newCount * 10,
                                     }));
+                                    const newCap = newCount * 10;
+                                    setGuests((prev) => {
+                                      const copy = [...prev];
+                                      while (copy.length < newCap) {
+                                        copy.push({
+                                          id: Math.random().toString(36).slice(2, 9),
+                                          name: '',
+                                          email: '',
+                                          company: '',
+                                          role: '',
+                                        });
+                                      }
+                                      return copy;
+                                    });
                                   }}
                                   className="w-full h-8 sm:h-9 px-2.5 pr-8 appearance-none rounded-[9px] bg-white border border-[#DDD0C2] text-[#1F1F1F] text-xs font-semibold focus:border-[#FF6600] outline-none transition-colors duration-150 cursor-pointer disabled:opacity-60"
                                 >
-                                  <option value={10}>1 Table (10 guests • £450)</option>
-                                  <option value={20}>2 Tables (20 guests • £900)</option>
-                                  <option value={30}>3 Tables (30 guests • £1,350)</option>
+                                  <option value={1}>1 Table (10 guests • £450)</option>
+                                  <option value={2}>2 Tables (20 guests • £900)</option>
+                                  <option value={3}>3 Tables (30 guests • £1,350)</option>
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-[#73685E]">
                                   <ChevronDown className="w-3.5 h-3.5" />
@@ -724,7 +830,31 @@ export function TicketModal() {
                               type="button"
                               onClick={() => {
                                 setBookingType('table');
+                                setTableCount(1);
                                 setFormData((prev) => ({ ...prev, quantity: 10 }));
+                                setGuests((prev) => {
+                                  const list: GuestState[] = [
+                                    {
+                                      id: prev[0]?.id || 'primary',
+                                      name: formData.name,
+                                      email: formData.email,
+                                      company: formData.company,
+                                      role: formData.role,
+                                    },
+                                  ];
+                                  for (let i = 1; i < 10; i++) {
+                                    list.push(
+                                      prev[i] || {
+                                        id: Math.random().toString(36).slice(2, 9),
+                                        name: '',
+                                        email: '',
+                                        company: '',
+                                        role: '',
+                                      }
+                                    );
+                                  }
+                                  return list;
+                                });
                               }}
                               className="px-2.5 py-1 rounded-[7px] bg-[#22A06B] hover:bg-[#1C8457] text-white text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors shrink-0"
                             >
@@ -868,8 +998,8 @@ export function TicketModal() {
                           </div>
                         </div>
 
-                        {/* Prompt to add more attendees if quantity is 1 */}
-                        {formData.quantity === 1 && (
+                        {/* Prompt to add more attendees if quantity is 1 (individual tickets only) */}
+                        {bookingType !== 'table' && formData.quantity === 1 && (
                           <button
                             type="button"
                             disabled={submitting}
@@ -884,32 +1014,33 @@ export function TicketModal() {
                         )}
 
                         {/* 3. Dynamic Guest Recipients Section */}
-                        {formData.quantity > 1 && (
+                        {((bookingType === 'table' && guests.length > 1) || (bookingType !== 'table' && formData.quantity > 1)) && (
                           <div className="space-y-2.5 pt-1">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1.5">
                                 <Users className="w-3.5 h-3.5 text-[#FF6600]" />
                                 <h3 className="text-xs sm:text-sm font-bold text-[#1F1F1F]">
                                   {bookingType === 'table'
-                                    ? `Table Guests (${formData.quantity - 1} remaining seats)`
+                                    ? `Table Guests (${guests.length - 1} attendee${guests.length - 1 === 1 ? '' : 's'})`
                                     : `Additional Guest Passes (${formData.quantity - 1})`}
                                 </h3>
                               </div>
                               <span className="text-[10px] font-bold text-[#EE6422] uppercase tracking-wider">
-                                Mandatory • Guest details required
+                                {bookingType === 'table'
+                                  ? 'Attendee Details (Removable if unassigned)'
+                                  : 'Mandatory • Guest details required'}
                               </span>
                             </div>
 
                             <div className="space-y-2">
-                              {Array.from({ length: formData.quantity - 1 }).map((_, idx) => {
+                              {guests.slice(1).map((currentGuest, idx) => {
                                 const guestIndex = idx + 1;
-                                const currentGuest =
-                                  guests[guestIndex] || { name: '', email: '', company: '', role: '' };
                                 return (
                                   <motion.div
-                                    key={guestIndex}
+                                    key={currentGuest.id || `guest-${guestIndex}`}
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.15 }}
                                     className="p-2.5 sm:p-3 rounded-[14px] bg-[#FFFDFB] border border-[#E8DCD0] shadow-[0_1px_4px_rgba(0,0,0,0.02)] space-y-2"
                                   >
@@ -919,30 +1050,28 @@ export function TicketModal() {
                                           Guest #{guestIndex + 1}
                                         </span>
                                         <span className="text-[11px] font-semibold text-[#403934]">
-                                          Attendee Details (Mandatory)
+                                          {bookingType === 'table'
+                                            ? 'Attendee Details (Removable)'
+                                            : 'Attendee Details (Mandatory)'}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-mono text-[#8C7E72]">
                                           Ticket #{guestIndex + 1}
                                         </span>
-                                        {bookingType !== 'table' && (
-                                          <button
-                                            type="button"
-                                            disabled={submitting}
-                                            onClick={() => {
-                                              setFormData((prev) => ({
-                                                ...prev,
-                                                quantity: Math.max(1, prev.quantity - 1),
-                                              }));
-                                              setGuests((prev) => prev.filter((_, i) => i !== guestIndex));
-                                            }}
-                                            title="Remove this guest pass"
-                                            className="p-1 rounded text-[#8C7E72] hover:text-[#D32F2F] hover:bg-[#FDECEC] transition-colors cursor-pointer"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        )}
+                                        <button
+                                          type="button"
+                                          disabled={submitting}
+                                          onClick={() => handleRemoveGuest(guestIndex)}
+                                          title={
+                                            bookingType === 'table'
+                                              ? 'Remove this guest slot (Table remains £450)'
+                                              : 'Remove this guest pass'
+                                          }
+                                          className="p-1 rounded text-[#8C7E72] hover:text-[#D32F2F] hover:bg-[#FDECEC] transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                       </div>
                                     </div>
 
@@ -1013,6 +1142,34 @@ export function TicketModal() {
                                 );
                               })}
 
+                              {/* Plus button to add more attendees to table (up to table capacity, NO extra charge) */}
+                              {bookingType === 'table' && guests.length < tableCount * 10 && (
+                                <button
+                                  type="button"
+                                  disabled={submitting}
+                                  onClick={() => {
+                                    setGuests((prev) => [
+                                      ...prev,
+                                      {
+                                        id: Math.random().toString(36).slice(2, 9),
+                                        name: '',
+                                        email: '',
+                                        company: '',
+                                        role: '',
+                                      },
+                                    ]);
+                                  }}
+                                  className="w-full py-2.5 px-3 rounded-[12px] border-2 border-dashed border-[#F5D8C0] hover:border-[#FF6600] bg-[#FFFBF8] hover:bg-[#FFF5EB] text-[#FF6600] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer group active:scale-[0.99]"
+                                >
+                                  <div className="w-5 h-5 rounded-full bg-[#FFE8D6] group-hover:bg-[#FF6600] group-hover:text-white flex items-center justify-center transition-colors">
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span>
+                                    Add Guest to Table ({tableCount * 10 - guests.length} seat{tableCount * 10 - guests.length === 1 ? '' : 's'} remaining • Included in £450 Package)
+                                  </span>
+                                </button>
+                              )}
+
                               {/* Plus button to add more attendees (individual bookings only) */}
                               {bookingType !== 'table' && (
                                 <button
@@ -1039,6 +1196,42 @@ export function TicketModal() {
                           </div>
                         )}
 
+                        {/* If in Table mode and all 9 guests were removed, show prompt to re-add */}
+                        {bookingType === 'table' && guests.length === 1 && (
+                          <div className="space-y-2 pt-1">
+                            <div className="p-3 rounded-[14px] bg-[#FFF8F2] border border-[#FFD0B0] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                              <div>
+                                <span className="font-bold text-[#1F1F1F] block text-xs sm:text-sm">
+                                  Table of 10 Reserved (£450)
+                                </span>
+                                <span className="text-[#73685E] text-[11px]">
+                                  9 unassigned seats. You can add guest details now or assign them later — your table reservation remains £450.
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={() => {
+                                  setGuests((prev) => [
+                                    ...prev,
+                                    {
+                                      id: Math.random().toString(36).slice(2, 9),
+                                      name: '',
+                                      email: '',
+                                      company: '',
+                                      role: '',
+                                    },
+                                  ]);
+                                }}
+                                className="px-3 py-1.5 rounded-[8px] bg-[#FF6600] hover:bg-[#e55c00] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Guest Details</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {error && <ErrorBox message={error} />}
                       </div>
 
@@ -1061,7 +1254,7 @@ export function TicketModal() {
                           <div className="space-y-2 text-xs">
                             {isTableBooking ? (
                               <div className="flex items-center justify-between text-[#403934]">
-                                <span>Table of 10 Package × {Math.max(1, Math.floor(formData.quantity / 10))}</span>
+                                <span>Table of 10 Package × {tableCount}</span>
                                 <span className="font-semibold text-[#1F1F1F]">
                                   {currencySymbol}{calculatedSubtotal}
                                 </span>
@@ -1078,7 +1271,7 @@ export function TicketModal() {
                             <div className="flex items-center justify-between text-[#403934]">
                               <span>3-Course Balti Meal</span>
                               <span className="text-[#22A06B] font-medium">
-                                {isTableBooking ? `Included (${formData.quantity} guests)` : 'Included'}
+                                {isTableBooking ? `Included (${tableCount * 10} seats package)` : 'Included'}
                               </span>
                             </div>
 
@@ -1086,7 +1279,7 @@ export function TicketModal() {
                               <div className="flex items-center justify-between text-[#403934]">
                                 <span>Table Seating</span>
                                 <span className="text-[#22A06B] font-medium">
-                                  {formData.quantity} Seats Accommodated
+                                  {tableCount * 10} Seats Accommodated
                                 </span>
                               </div>
                             )}
@@ -1109,7 +1302,7 @@ export function TicketModal() {
                                 </span>
                                 <span className="text-[10px] text-[#8C7E72]">
                                   {isTableBooking
-                                    ? `${Math.max(1, Math.floor(formData.quantity / 10))} table (${formData.quantity} guests)`
+                                    ? `${tableCount} table (${tableCount * 10} seats accommodated)`
                                     : `${formData.quantity} ${formData.quantity === 1 ? 'attendee pass' : 'attendee passes'}`}
                                 </span>
                               </div>
